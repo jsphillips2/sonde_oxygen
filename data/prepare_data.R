@@ -99,7 +99,7 @@ sonde_prep3 = sonde_prep2 %>%
          T_S = as.numeric(as.factor(yearT_S)),
          year_day = paste(year, yday),
          D_M = as.numeric(as.factor(year_day)),
-         par2 = ifelse(par==0, min(par[which(par>0)]), par)) %>%
+         par = ifelse(par==0, min(par[which(par>0)]), par)) %>%
   select(-j, -k ,-yearT_S, -year_day) %>%
   as.data.frame()
 
@@ -163,9 +163,11 @@ N = length(o2_obs)
 T_S = length(S) 
 D = sum(K)
 Y = length(K)
+o2_st = c(1, cumsum((S)[1:(T_S-1)]) + 1)
+dy_st = c(1, cumsum((K)[1:(Y-1)]) + 1) 
 
 # export as .R
-# stan_rdump(c("D_M","S","K","N","D","Y","T_S",
+# stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
 #              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
 #              "sch_conv","z","sig_obs","k0","k1","k3"), file="data/sonde_list.R")
 
