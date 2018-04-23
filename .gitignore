@@ -34,6 +34,6 @@ vignettes/*.pdf
 .Rproj.user
 
 # Additional
-.rds
+*.rds
 .DS_Store
-.docx
+*.docx
