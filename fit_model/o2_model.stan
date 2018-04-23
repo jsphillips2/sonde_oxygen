@@ -8,6 +8,8 @@ data {
   int D_M[N]; // mapping of observations to days
   int K[Y]; // number of days in each year
   int S[T_S]; // number of steps in each time series
+  int o2_st[T_S]; // starting positions for each time serires
+  int dy_st[Y]; // starting positions for each day
   // actual data
   vector<lower=0>[N] o2_obs; // observed oxygen [g m^-3]
   vector<lower=0>[N] o2_eq; // equilibrium oxygen [g m^-3] 
@@ -57,9 +59,6 @@ transformed parameters {
   }
 }
 model {
-  // declare variables
-  int p1; // iterator for days
-  int p2; // iterator for times
   // priors
   alpha ~ normal(3, 1.5) T[0, ]; // perhaps supply these values as data
   gamma_1 ~ normal(1.1, 0.4) T[1, ]; // perhaps supply these values as data
@@ -68,22 +67,20 @@ model {
   sig_rho ~ normal(0.5, 0.6) T[0, ]; // perhaps supply these values as data
   sig_proc ~ normal(100, 100) T[0, ]; // perhaps supply these values as data
   // random walk for daily parameters
-  p1 = 1;
   for (y in 1:Y){
-    log_beta0[p1] ~ normal(6, 0.6); // perhaps supply these values as data
-    log_rho[p1] ~ normal(5.5, 0.6); // perhaps supply these values as data
-    log_beta0[(p1+1):(p1+K[y]-1)] ~ normal(log_beta0[p1:(p1+K[y]-2)], sig_beta0);
-    log_rho[(p1+1):(p1+K[y]-1)] ~ normal(log_rho[p1:(p1+K[y]-2)], sig_rho);
-    p1 = p1 + K[y]; // advance iterator 
+    log_beta0[dy_st[y]] ~ normal(6, 0.6); // perhaps supply these values as data
+    log_rho[dy_st[y]] ~ normal(5.5, 0.6); // perhaps supply these values as data
+    log_beta0[(dy_st[y]+1):(dy_st[y]+K[y]-1)] 
+      ~ normal(log_beta0[dy_st[y]:(dy_st[y]+K[y]-2)], sig_beta0);
+    log_rho[(dy_st[y]+1):(dy_st[y]+K[y]-1)] 
+      ~ normal(log_rho[dy_st[y]:(dy_st[y]+K[y]-2)], sig_rho);
   }
-  // oxygen dynamics and observation
-  p2 = 1;
+  // state process
   for (t in 1:T_S){
-    // state process
-    o2[p2] ~ normal(o2_obs[p2], sig_obs);
-    o2[(p2+1):(p2+S[t]-1)] ~ normal(o2_pred[p2:(p2+S[t]-2)], sig_proc);
-    // observation process
-    o2_obs ~ normal(o2, sig_obs);
-    p2 = p2 + S[t];
+    o2[o2_st[t]] ~ normal(o2_obs[o2_st[t]], sig_obs);
+    o2[(o2_st[t]+1):(o2_st[t]+S[t]-1)] 
+      ~ normal(o2_pred[o2_st[t]:(o2_st[t]+S[t]-2)], sig_proc);
   }
+  // observation process
+  o2_obs ~ normal(o2, sig_obs);
 }
