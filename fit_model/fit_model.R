@@ -9,7 +9,7 @@ source("fit_model/stan_utility.R")
 
 # stan settings
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores()-1)
+options(mc.cores = parallel::detectCores())
 
 # read data
 data = read_rdump("data/sonde_list.R")
@@ -38,7 +38,7 @@ init_fn = function(){
 
 # fit model
 fit = stan(file='fit_model/o2_model_nc.stan', data=data, seed=194838, chains = 1,
-           init = init_fn, iter = 2000, warmup = 1000)
+           init = init_fn, iter = 2000)
 
 # summary of fit
 fit_summary = summary(fit)$summary %>% 
@@ -46,7 +46,7 @@ fit_summary = summary(fit)$summary %>%
     mutate(var = rownames(summary(fit)$summary))}
 
 # check Rhat
-fit_summary %>% filter(Rhat > 1.1)
+fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var)
 
 # additional diagnostics
 check_div(fit)
@@ -62,7 +62,7 @@ check_energy(fit)
 #==========
 
 # fixed parameters by step
-fixed_par_v = c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc")
+fixed_par_v = c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc","lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols()
@@ -73,7 +73,7 @@ fit_clean = fit_summary %>%
   rename(lower2 = `2.5%`, lower25 = `25%`, middle = `50%`, upper75 = `75%`, upper97 = `97.5%`)  %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])),
-         day = ifelse(name %in% c("beta0","rho"), index, D_M[index])) %>%
+         day = ifelse(name %in% c("beta0","rho"), index, data$D_M[index])) %>%
   select(name, index, day, middle, lower2, lower25, upper75, upper97) %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
