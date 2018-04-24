@@ -28,7 +28,7 @@ fit_clean %>%
 
 library(GGally)
 
-fixed_par_v = c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc")
+fixed_par_v = c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc","lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols()
