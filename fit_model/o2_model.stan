@@ -8,7 +8,7 @@ data {
   int D_M[N]; // mapping of observations to days
   int K[Y]; // number of days in each year
   int S[T_S]; // number of steps in each time series
-  int o2_st[T_S]; // starting positions for each time serires
+  int o2_st[T_S]; // starting positions for each time series
   int dy_st[Y]; // starting positions for each day
   // actual data
   vector<lower=0>[N] o2_obs; // observed oxygen [g m^-3]
@@ -60,23 +60,23 @@ transformed parameters {
 }
 model {
   // priors
-  alpha ~ normal(3, 1.5) T[0, ]; // perhaps supply these values as data
-  gamma_1 ~ normal(1.1, 0.4) T[1, ]; // perhaps supply these values as data
-  gamma_2 ~ normal(1.1, 0.4) T[1, ]; // perhaps supply these values as data
-  sig_beta0 ~ normal(0.5, 0.6) T[0, ]; // perhaps supply these values as data
-  sig_rho ~ normal(0.5, 0.6) T[0, ]; // perhaps supply these values as data
-  sig_proc ~ normal(100, 100) T[0, ]; // perhaps supply these values as data
+  alpha ~ normal(3, 1.5) T[0, ]; 
+  gamma_1 ~ normal(1.1, 0.4) T[1, ]; 
+  gamma_2 ~ normal(1.1, 0.4) T[1, ]; 
+  sig_beta0 ~ normal(0.5, 0.6) T[0, ]; 
+  sig_rho ~ normal(0.5, 0.6) T[0, ]; 
+  sig_proc ~ normal(100, 100) T[0, ]; 
   // random walk for daily parameters
-  for (y in 1:Y){
-    log_beta0[dy_st[y]] ~ normal(6, 0.6); // perhaps supply these values as data
-    log_rho[dy_st[y]] ~ normal(5.5, 0.6); // perhaps supply these values as data
+  for (y in 1:Y) {
+    log_beta0[dy_st[y]] ~ normal(6, 0.6); 
+    log_rho[dy_st[y]] ~ normal(5.5, 0.6); 
     log_beta0[(dy_st[y]+1):(dy_st[y]+K[y]-1)] 
       ~ normal(log_beta0[dy_st[y]:(dy_st[y]+K[y]-2)], sig_beta0);
     log_rho[(dy_st[y]+1):(dy_st[y]+K[y]-1)] 
       ~ normal(log_rho[dy_st[y]:(dy_st[y]+K[y]-2)], sig_rho);
   }
   // state process
-  for (t in 1:T_S){
+  for (t in 1:T_S) {
     o2[o2_st[t]] ~ normal(o2_obs[o2_st[t]], sig_obs);
     o2[(o2_st[t]+1):(o2_st[t]+S[t]-1)] 
       ~ normal(o2_pred[o2_st[t]:(o2_st[t]+S[t]-2)], sig_proc);
