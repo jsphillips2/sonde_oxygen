@@ -69,7 +69,6 @@ sonde_prep %>%
 # they are very warm, so that could explain low value
 
 # late 2015 looks too sparse; filter for days < 184
-# filter min value in 2013
 # truncate at day 230
 sonde_prep2 = sonde_prep %>%
   filter(!(year==2015 & yday > 184), yday < 230) %>%
@@ -83,8 +82,8 @@ sonde_prep2 = sonde_prep %>%
 #========== Prepare for export and check
 #==========
 
-# calculate variable T_S map observations to time series
-# calculate variable D_M map observations to days
+# calculate variable T_S to map observations to time series
+# calculate variable D_M to map observations to days
 # omit NA's 
 # replace 0 PAR with minimum non-0 PAr
 # convert to data frame
@@ -136,10 +135,10 @@ sonde_prep3 %>%
 
 
 #==========
-#========== Package data and check
+#========== Package data 
 #==========
 
-# define variables in evnironmnet and dump
+# define variables in evnironment 
 o2_obs = sonde_prep3$do
 o2_eq = sonde_prep3$do_eq
 light = sonde_prep3$par
