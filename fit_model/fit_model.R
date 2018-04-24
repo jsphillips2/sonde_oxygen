@@ -35,6 +35,8 @@ init_fn = function(){
 #==========
 #========== Fit model
 #==========
+model = "o2_model_nc"
+model_path = paste0("fit_model/",model,".stan")
 
 # fit model
 fit = stan(file='fit_model/o2_model_nc.stan', data=data, seed=194838, chains = 1,
@@ -78,8 +80,9 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # Export
-# write_csv(fixed_pars, "model_output/fixed_pars_full.csv")
-# write_csv(fit_clean, "model_output/summaries_clean.csv")
+output_path = paste0("model_output/",model)
+# write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
+# write_csv(fit_clean, paste0(output_path,"/summaries_clean.csv"))
 
 
 
