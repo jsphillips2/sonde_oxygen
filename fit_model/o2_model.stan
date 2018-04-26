@@ -1,6 +1,6 @@
 data {
   // declare variables
-  // indeces
+  // indices
   int N; // number of observations
   int Y; // number of years
   int D; // number of days
@@ -31,12 +31,16 @@ parameters{
   real<lower=0> sig_beta0; // sd of log_beta0 random walk 
   real<lower=0> sig_rho; // sd of log_rho random walk 
   real<lower=0> sig_proc; // sd of oxygen state process error
-  vector[D] log_beta0; // max gpp at temp_ref (log scale)
-  vector[D] log_rho; // er at temp_ref (log scale)
   vector[N] o2; // inferred oxygen state [g m^-3]
+  vector[Y] log_beta0_init; // initial value for log_beta0
+  vector[Y] log_rho_init; // initial value for log_rho
+  vector[N] z_beta0; // z value for non-centered parameterization
+  vector[N] z_rho; // z value for non-centered parameterization
 }
 transformed parameters {
   // declare variables
+  vector[D] log_beta0; // max gpp at temp_ref (log scale)
+  vector[D] log_rho; // er at temp_ref (log scale)
   vector<lower=0>[D] beta0; // max gpp at temp_ref [g m^-2 h^-1]
   vector<lower=0>[D] rho; // er at temp_ref [g m^-2 h^-1]
   vector<lower=0>[N] beta; // max gpp at high light [g m^-2 h^-1]
@@ -45,6 +49,17 @@ transformed parameters {
   vector[N] nep; // nep [g m^-2 h^-1]
   vector[N] air; // oxygen exchange with atmosphere [g m^-2 h^-1]
   vector[N] o2_pred; // predicted oxygen [g m^-3]
+  // daily parameters
+  for (y in 1:Y) {
+    // inital value
+    log_beta0[dy_st[y]] = log_beta0_init[y];
+    log_rho[dy_st[y]] = log_rho_init[y];
+    // random walk
+    for (d in (dy_st[y]+1):(dy_st[y]+K[y]-1)){
+      log_beta0[d] = log_beta0[d-1] + sig_beta0*z_beta0[d-1];
+      log_rho[d] = log_rho[d-1] + sig_rho*z_rho[d-1]; 
+    }
+  }
   // exp parameters
   beta0 = exp(log_beta0); 
   rho = exp(log_rho);
@@ -66,15 +81,12 @@ model {
   sig_beta0 ~ normal(0.5, 0.6) T[0, ]; 
   sig_rho ~ normal(0.5, 0.6) T[0, ]; 
   sig_proc ~ normal(100, 100) T[0, ]; 
-  // random walk for daily parameters
-  for (y in 1:Y) {
-    log_beta0[dy_st[y]] ~ normal(6, 0.6); 
-    log_rho[dy_st[y]] ~ normal(5.5, 0.6); 
-    log_beta0[(dy_st[y]+1):(dy_st[y]+K[y]-1)] 
-      ~ normal(log_beta0[dy_st[y]:(dy_st[y]+K[y]-2)], sig_beta0);
-    log_rho[(dy_st[y]+1):(dy_st[y]+K[y]-1)] 
-      ~ normal(log_rho[dy_st[y]:(dy_st[y]+K[y]-2)], sig_rho);
-  }
+  // initial values
+  log_beta0_init ~ normal(6, 0.6); 
+  log_rho_init ~ normal(5.5, 0.6); 
+  // z values for non-centered parameterization
+  z_beta0 ~ normal(0, 1);
+  z_rho ~ normal(0, 1);
   // state process
   for (t in 1:T_S) {
     o2[o2_st[t]] ~ normal(o2_obs[o2_st[t]], sig_obs);
@@ -83,4 +95,47 @@ model {
   }
   // observation process
   o2_obs ~ normal(o2, sig_obs);
+}
+generated quantities{
+  // declare variables
+  vector[N] error_proc_real;
+  vector[N] error_proc_sim;
+  vector[N] error_obs_real;
+  vector[N] error_obs_sim;
+  vector[N] sq_error_proc_real;
+  vector[N] sq_error_proc_sim;
+  vector[N] sq_error_obs_real;
+  vector[N] sq_error_obs_sim;
+  real chi_proc_real;
+  real chi_proc_sim;
+  real chi_obs_real;
+  real chi_obs_sim;
+  for (t in 1:T_S){
+    // set initial values to 0 (they don't make sense to calculate)
+    error_proc_real[o2_st[t]] = 0;
+    error_proc_sim[o2_st[t]] = 0;
+    error_obs_real[o2_st[t]] = 0;
+    error_obs_sim[o2_st[t]] = 0;
+    sq_error_proc_real[o2_st[t]] = 0;
+    sq_error_proc_sim[o2_st[t]] = 0;
+    sq_error_obs_real[o2_st[t]] = 0;
+    sq_error_obs_sim[o2_st[t]] = 0;
+    for (n in (o2_st[t]+1):(o2_st[t]+S[t]-1)){
+      // errors 
+      error_proc_real[n] = o2[n] - o2_pred[n-1];
+      error_proc_sim[n] = normal_rng(o2_pred[n-1], sig_proc) - o2_pred[n-1];
+      error_obs_real[n] = o2_obs[n] - o2[n];
+      error_obs_sim[n] = normal_rng(o2[n], sig_obs) - o2[n];
+      // squared errors
+      sq_error_proc_real[n] = error_proc_real[n]^2;
+      sq_error_proc_sim[n] = error_proc_sim[n]^2;
+      sq_error_obs_real[n] = error_obs_real[n]^2;
+      sq_error_obs_sim[n] = error_obs_sim[n]^2;
+    }
+  }
+  // chi-squared goodness-of-fit
+  chi_proc_real = sum(sq_error_proc_real/(sig_proc^2));
+  chi_proc_sim = sum(sq_error_proc_sim/(sig_proc^2));
+  chi_obs_real = sum(sq_error_obs_real/(sig_obs^2));
+  chi_obs_sim = sum(sq_error_obs_sim/(sig_obs^2));
 }
