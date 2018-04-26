@@ -130,6 +130,8 @@ sonde_prep3 %>%
   ungroup() %>%
   filter(D_M == sonde_prep3$D_M[1520])
 
+# export prepared data
+# write_csv(sonde_prep2, "data/sonde_prep.csv")
 
 
 
