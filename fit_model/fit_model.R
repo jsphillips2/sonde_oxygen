@@ -37,7 +37,7 @@ init_fn = function(){
 #========== Fit model
 #==========
 # initial specifications
-model = "o2_model_nc3"
+model = "o2_model"
 model_path = paste0("fit_model/",model,".stan")
 chains = 1
 iter = 1000
@@ -47,7 +47,7 @@ fit = stan(file=model_path, data=data, seed=194838, chains = chains,
            init = init_fn, iter = iter)
 
 # summary of fit
-fit_summary = summary(fit)$summary %>% 
+fit_summary = summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>% 
 {as_data_frame(.) %>%
     mutate(var = rownames(summary(fit)$summary))}
 
@@ -125,17 +125,18 @@ post_pred %>%
 
 # clean variable names in summary
 fit_clean = fit_summary %>%
-  rename(lower2 = `2.5%`, lower25 = `25%`, middle = `50%`, upper75 = `75%`, upper97 = `97.5%`)  %>%
+  rename(lower16 = `16%`, middle = `50%`, upper84 = `84%`)  %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])),
          day = ifelse(name %in% c("beta0","rho"), index, data$D_M[index])) %>%
-  select(name, index, day, middle, lower2, lower25, upper75, upper97) %>%
+  select(name, index, day, middle, lower16, upper84) %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # Export
 output_path = paste0("model_output/",model)
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
-# write_csv(fit_clean, paste0(output_path,"/summaries_clean.csv"))
+# write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
+# write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
 
 
 
