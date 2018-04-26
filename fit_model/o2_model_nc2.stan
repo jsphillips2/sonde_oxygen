@@ -24,17 +24,6 @@ data {
   real<lower=0> k3; // gas exhange constant 3
   real<lower=0> sig_obs; // observation error sd [g m^-3]
 }
-transformed data{
-  // declare variables
-  vector[N] d_o2_obs; // hourly change in observed oxygen
-  // change in observed oxygen
-  for (t in 1:T_S){
-    d_o2_obs[o2_st[t]] = 0; // set initial values to NULL (makes indexing easier)
-    for(n in (o2_st[t]+1):(o2_st[t]+S[t]-1)){
-      d_o2_obs[n] = o2_obs[n] - o2_obs[n-1];
-    }
-  }
-}
 parameters{
   real<lower=0> alpha; // slope of gpp ~ light at low light
   real<lower=1> gamma_1; // scaling of gpp with temperature
@@ -59,7 +48,6 @@ transformed parameters {
   vector<lower=0>[N] er; // er [g m^-2 h^-1]
   vector[N] nep; // nep [g m^-2 h^-1]
   vector[N] air; // oxygen exchange with atmosphere [g m^-2 h^-1]
-  vector[N] o2_proj; // predicted change in oxygen [g m^-3]
   vector[N] o2_pred; // predicted oxygen [g m^-3]
   // daily parameters
   for (y in 1:Y) {
@@ -82,8 +70,7 @@ transformed parameters {
     er[n] = rho[D_M[n]]*gamma_2^(temp[n] - temp_ref);
     nep[n] = gpp[n] - er[n];
     air[n] = ((k0 + k1*wspeed[n]^k3)/100)*sch_conv[n]*(o2_eq[n] - o2[n]);
-    o2_proj[n] = (nep[n] + air[n])/z;
-    o2_pred[n] = o2[n] + o2_proj[n];
+    o2_pred[n] = o2[n] + (nep[n] + air[n])/z;
   }
 }
 model {
@@ -111,50 +98,55 @@ model {
 }
 generated quantities{
   // declare variables
+  vector[N] air_sim; // simulated flux to air
   vector[N] o2_sim; // simulated oxygen
-  vector[N] o2_proj_sim; // projected oxygen (deterministic)
+  vector[N] o2_pred_sim; // predicted simulated oxygen
   vector[N] o2_obs_sim; // simulated observed oxygen
-  vector[N] air_sim; // simulated observed oxygen
-  vector[N] d_o2_sim; // hourly change in simulated oxygen
   vector[N] resid_obs; // observed residuals
   vector[N] resid_sim; // simulated residuals
-  vector[N] mag_obs; // magnitude of observed residuals
-  vector[N] mag_sim; // magnitude of simulated residuals
-  real rmse_obs; // rmse for observed
-  real rmse_sim; // rmse for simulated
-  // state process
-  for (t in 1:T_S) {
-    // initial values
-    o2_sim[o2_st[t]] = normal_rng(o2_obs[o2_st[t]], sig_obs);
-    o2_obs_sim[o2_st[t]] = o2_sim[o2_st[t]]; 
-    d_o2_sim[o2_st[t]] = 0; // set to 0 (makes indexing easier)
-    resid_obs[o2_st[t]] = 0; // set to 0 (makes indexing easier)
-    resid_sim[o2_st[t]] = 0; // set to 0 (makes indexing easier)
-    mag_obs[o2_st[t]] = 0; // set to 0 (makes indexing easier)
-    mag_sim[o2_st[t]] = 0; // set to 0 (makes indexing easier)
-    // deterministic process
-    air_sim[o2_st[t]] = 
-        ((k0 + k1*wspeed[o2_st[t]]^k3)/100)*sch_conv[o2_st[t]]*(o2_eq[o2_st[t]] -
-          o2_sim[o2_st[t]]);
-    o2_proj_sim[o2_st[t]] = (nep[o2_st[t]] + air_sim[o2_st[t]])/z;
-    for (n in (o2_st[t]+1):(o2_st[t]+S[t]-1)) {
-      // state process
-      o2_sim[n] = normal_rng(o2_sim[n-1] + o2_proj_sim[n-1], sig_proc);
-      // observation process
-      o2_obs_sim[n] = normal_rng(o2_sim[n], sig_obs);
-      // deterministic process
-      air_sim[n] = 
-        ((k0 + k1*wspeed[n]^k3)/100)*sch_conv[n]*(o2_eq[n] - o2_sim[n]);
-      o2_proj_sim[n] = (nep[n] + air_sim[n])/z;
-      // evaluate fit
-      d_o2_sim[n] = o2_obs_sim[n] - o2_obs_sim[n-1];
-      resid_obs[n] = d_o2_obs[n] - o2_proj[n]; // observed residuals
-      resid_sim[n] = d_o2_sim[n] - o2_proj_sim[n]; // simulated residuals 
-      mag_obs[n] = sqrt(resid_obs[n]^2); // observed squared error
-      mag_sim[n] = sqrt(resid_sim[n]^2); // simulated squared error
+  vector[N] error_obs; // observed squared error
+  vector[N] error_sim; // simulated squared error
+  vector[N] chi_sum_obs; // observed squared error
+  vector[N] chi_sum_sim; // simulated squared error
+  real rmse_obs; // observed root mean squared error
+  real rmse_sim; // simulated root mean squared error
+  real chi_sum_obs; // observed root mean squared error
+  real chi_sum_sim; // simulated root mean squared error
+  // state process 
+  for (t in 1:T_S) { 
+    // initial values 
+    resid_obs[o2_st[t]] = 0; // set to 0 to make indexing easier
+    resid_sim[o2_st[t]] = 0; // set to 0 to make indexing easier
+    error_obs[o2_st[t]] = 0; // set to 0 to make indexing easier
+    error_sim[o2_st[t]] = 0; // set to 0 to make indexing easier
+    o2_sim[o2_st[t]] = normal_rng(o2_obs[o2_st[t]], sig_obs); 
+    o2_obs_sim[o2_st[t]] = normal_rng(o2_sim[o2_st[t]], sig_obs); 
+    air_sim[o2_st[t]] =  
+      ((k0 + k1*wspeed[o2_st[t]]^k3)/100)*sch_conv[o2_st[t]]*(o2_eq[o2_st[t]] - 
+        o2_sim[o2_st[t]]); 
+    o2_pred_sim[o2_st[t]] = o2_sim[o2_st[t]] + (nep[o2_st[t]] + 
+      air_sim[o2_st[t]])/z; 
+    for (n in (o2_st[t]+1):(o2_st[t]+S[t]-1)) { 
+      // state process 
+      o2_sim[n] = normal_rng(o2_pred_sim[n-1], sig_proc); 
+      // deterministic process 
+      air_sim[n] =  
+        ((k0 + k1*wspeed[n]^k3)/100)*sch_conv[n]*(o2_eq[n] - o2_sim[n]); 
+      o2_pred_sim[n] = o2_sim[n] + (nep[n] + air_sim[n])/z; 
+      // observation process 
+      o2_obs_sim[n] = normal_rng(o2_sim[n], sig_obs); 
+      // residuals
+      resid_obs[n] = o2_obs[n] - o2_pred[n-1];
+      resid_sim[n] = o2_obs_sim[n] - o2_pred_sim[n-1];
+      error_obs[n] = resid_obs[n]^2;
+      error_sim[n] = resid_sim[n]^2;
+      chi_obs[n] = error_obs[n]/o2_pred[n-1];
+      chi_sim[n] = error_sim[n]/o2_pred_sim[n-1];
     }
-  }
-  // RMSE for entire time series
-  rmse_obs = sqrt(sum(mag_obs)/(N-T_S)); // rmse for observed
-  rmse_sim = sqrt(sum(mag_sim)/(N-T_S)); // rmse for simulated
+  }  
+  // rmse
+  rmse_obs = sqrt(sum(error_obs)/(N-T_S));
+  rmse_sim = sqrt(sum(error_sim)/(N-T_S));
+  chi_sum_obs = sum(chi_obs);
+  chi_sum_sim = sum(chi_sim);
 }
