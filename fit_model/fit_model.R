@@ -6,10 +6,11 @@
 library(tidyverse)
 library(rstan)
 source("fit_model/stan_utility.R")
+library(GGally)
 
 # stan settings
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
+options(mc.cores = parallel::detectCores()-1)
 
 # read data
 data = read_rdump("data/sonde_list.R")
@@ -35,12 +36,15 @@ init_fn = function(){
 #==========
 #========== Fit model
 #==========
-model = "o2_model_nc"
+# initial specifications
+model = "o2_model_nc3"
 model_path = paste0("fit_model/",model,".stan")
+chains = 1
+iter = 1000
 
 # fit model
-fit = stan(file='fit_model/o2_model_nc.stan', data=data, seed=194838, chains = 1,
-           init = init_fn, iter = 2000)
+fit = stan(file=model_path, data=data, seed=194838, chains = chains,
+           init = init_fn, iter = iter)
 
 # summary of fit
 fit_summary = summary(fit)$summary %>% 
@@ -60,7 +64,7 @@ check_energy(fit)
 
 
 #==========
-#========== Process output
+#========== Additional diagnostics
 #==========
 
 # fixed parameters by step
@@ -69,6 +73,55 @@ fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols()
 names(fixed_pars) = fixed_par_v
+
+# examine chains for parameters
+fixed_pars %>%
+  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2)), chains)) %>%
+  gather(par, value, names(fixed_pars)) %>%
+  filter(par != "lp__") %>%
+  ggplot(aes(step, value, color=factor(chain)))+
+  facet_wrap(~par, scales="free_y")+
+  geom_line(alpha=0.5)+
+  theme_bw()
+
+# pairs plot for parameters
+ggpairs(fixed_pars)
+
+
+
+
+
+#==========
+#========== Poterior Predictive Check
+#==========
+
+post_pred_v = c("chi_proc_real","chi_proc_sim","chi_obs_real","chi_obs_sim")
+post_pred = rstan::extract(fit, pars=post_pred_v) %>%
+  lapply(as_data_frame) %>%
+  bind_cols()
+names(post_pred) = post_pred_v
+
+post_pred %>%
+  ggplot(aes(chi_proc_real,chi_proc_sim))+
+  geom_point()+
+  geom_abline(intercept=0, slope=1)+
+  scale_y_continuous(limits=c(4800,5600))+
+  scale_x_continuous(limits=c(4800,5600))+
+  theme_bw()
+
+post_pred %>%
+  ggplot(aes(chi_obs_real,chi_obs_sim))+
+  geom_point()+
+  geom_abline(intercept=0, slope=1)+
+  scale_y_continuous(limits=c(4800,5600))+
+  scale_x_continuous(limits=c(4800,5600))+
+  theme_bw()
+  
+
+
+#==========
+#========== Prepare output for export
+#==========
 
 # clean variable names in summary
 fit_clean = fit_summary %>%
