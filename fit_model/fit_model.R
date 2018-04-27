@@ -95,12 +95,14 @@ ggpairs(fixed_pars)
 #========== Poterior Predictive Check
 #==========
 
+# extract relevant variables
 post_pred_v = c("chi_proc_real","chi_proc_sim","chi_obs_real","chi_obs_sim")
 post_pred = rstan::extract(fit, pars=post_pred_v) %>%
   lapply(as_data_frame) %>%
   bind_cols()
 names(post_pred) = post_pred_v
 
+# process error
 post_pred %>%
   ggplot(aes(chi_proc_real,chi_proc_sim))+
   geom_point()+
@@ -109,6 +111,7 @@ post_pred %>%
   scale_x_continuous(limits=c(4800,5600))+
   theme_bw()
 
+# observation error
 post_pred %>%
   ggplot(aes(chi_obs_real,chi_obs_sim))+
   geom_point()+
@@ -128,7 +131,7 @@ fit_clean = fit_summary %>%
   rename(lower16 = `16%`, middle = `50%`, upper84 = `84%`)  %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])),
-         day = ifelse(name %in% c("beta0","rho"), index, data$D_M[index])) %>%
+         day = ifelse(name %in% c("beta0","rho","GPP","ER","NEP","AIR","Flux"), index, data$D_M[index])) %>%
   select(name, index, day, middle, lower16, upper84) %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
