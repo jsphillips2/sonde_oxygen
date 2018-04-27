@@ -5,8 +5,8 @@
 # load packages
 library(tidyverse)
 library(rstan)
-source("fit_model/stan_utility.R")
 library(GGally)
+source("fit_model/stan_utility.R")
 
 # stan settings
 rstan_options(auto_write = TRUE)
