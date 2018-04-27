@@ -66,7 +66,7 @@ sonde_prep %>%
   theme_classic()
 
 # these days show reasonable diel curves
-# they are very warm, so that could explain low value
+# they are very warm, so that could explain low values
 
 # late 2015 looks too sparse; filter for days < 184
 # truncate at day 230
@@ -85,7 +85,7 @@ sonde_prep2 = sonde_prep %>%
 # calculate variable T_S to map observations to time series
 # calculate variable D_M to map observations to days
 # omit NA's 
-# replace 0 PAR with minimum non-0 PAr
+# replace 0 PAR with minimum non-0 PAR
 # convert to data frame
 sonde_prep3 = sonde_prep2 %>%
   group_by(year) %>%
@@ -105,7 +105,7 @@ sonde_prep3 = sonde_prep2 %>%
 # check T_S
 sonde_prep2 %>% 
   expand(year,month,yday,hour) %>%
-  full_join(sonde_prep4) %>%
+  full_join(sonde_prep3) %>%
   arrange(year,yday) %>%
   mutate(time = yday + hour/24) %>%
   ggplot(aes(time, do, color=factor(T_S)))+
@@ -116,7 +116,7 @@ sonde_prep2 %>%
 # check D_M
 sonde_prep2 %>% 
   expand(year,month,yday,hour) %>%
-  full_join(sonde_prep4) %>%
+  full_join(sonde_prep3) %>%
   arrange(year,yday) %>%
   mutate(time = yday + hour/24) %>%
   filter(D_M %in% (50 + c(1:10))) %>%
