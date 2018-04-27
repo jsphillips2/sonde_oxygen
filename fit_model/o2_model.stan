@@ -110,6 +110,12 @@ generated quantities{
   real chi_proc_sim;
   real chi_obs_real;
   real chi_obs_sim;
+  int pos;
+  vector[D] GPP;
+  vector[D] ER;
+  vector[D] NEP;
+  vector[D] AIR;
+  vector[D] Flux;
   for (t in 1:T_S){
     // set initial values to 0 (they don't make sense to calculate)
     error_proc_real[o2_st[t]] = 0;
@@ -138,4 +144,14 @@ generated quantities{
   chi_proc_sim = sum(sq_error_proc_sim/(sig_proc^2));
   chi_obs_real = sum(sq_error_obs_real/(sig_obs^2));
   chi_obs_sim = sum(sq_error_obs_sim/(sig_obs^2));
+  // daily fluxes
+  pos = 1;
+  for (d in 1:D){
+    GPP[d] = sum(gpp[pos:(pos+23)]);
+    ER[d] = sum(er[pos:(pos+23)]);
+    NEP[d] = sum(nep[pos:(pos+23)]);
+    AIR[d] = sum(air[pos:(pos+23)]);
+    Flux[d] = (NEP[d] + AIR[d])/z;
+    pos = pos + 24; // advance counter
+  }
 }
