@@ -122,6 +122,43 @@ model_fit %>%
 
 
 
+
+#==========
+#========== Figure 4: RESP vs. GPP
+#==========
+
+# prep data
+met_d = model_fit %>%
+  filter(name %in% c("GPP","ER","NEP")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  select(-lower16, -upper84) %>%
+  mutate(middle = middle/1000) %>%
+  spread(name, middle) 
+
+# plot
+met_d %>%
+  ggplot(aes(GPP, ER, color=factor(year)))+
+  geom_point(size=2)+
+  geom_abline(intercept=0, slope=1)+
+  scale_color_manual("",values=c("gray60","gray40","gray20","black"))+
+  scale_y_continuous(expression("ER (g "*O[2]~m^{-2}~day^{-1}*")"), limits=c(2,9))+
+  scale_x_continuous(expression("GPP (g "*O[2]~m^{-2}~day^{-1}*")"), limits=c(2,9))+
+  coord_equal()+
+  theme_base
+
+# calculate correlation
+with(met_d, cor(GPP, ER))
+
+# means
+met_d %>% select(ER, GPP, NEP) %>%
+  apply(2, mean)
+
+
+
+
+
 #==========
 #========== Figure 4: Daily Responses
 #==========
@@ -143,35 +180,11 @@ model_fit %>%
   geom_line(size=0.6)+
   scale_color_manual("",values=c("dodgerblue","firebrick"))+
   scale_fill_manual("",values=c("dodgerblue","firebrick"))+
-  scale_y_continuous(expression("Metabolism Parameter (g "*O[2]~m^{-2}~day^{-1}*")"))+
+  scale_y_continuous(expression("Metabolism Parameter (g "*O[2]~m^{-2}~h^{-1}*")"),
+                     breaks=c(0.15,0.3,0.45))+
   scale_x_continuous("Day of Year")+
   theme_base
 
-
-
-
-#==========
-#========== Figure 5: RESP vs. GPP
-#==========
-
-model_fit %>%
-  filter(name %in% c("GPP","ER")) %>%
-  left_join(sonde_data %>%
-              group_by(year, yday) %>%
-              summarize(day = unique(D_M))) %>%
-  select(-lower16, -upper84) %>%
-  mutate(middle = middle/1000) %>%
-  spread(name, middle) %>%
-  ggplot(aes(GPP, ER, color=factor(year)))+
-  geom_point(size=2)+
-  geom_abline(intercept=0, slope=1)+
-  scale_color_brewer("",type = "div", palette="Spectral")+
-  scale_y_continuous(expression("ER (g "*O[2]~m^{-2}~day^{-1}*")"), limits=c(2,9))+
-  scale_x_continuous(expression("GPP (g "*O[2]~m^{-2}~day^{-1}*")"), limits=c(2,9))+
-  coord_equal()+
-  theme_base
-
-  
 
 
 
@@ -188,12 +201,20 @@ model_fit %>%
   select(-lower16, -upper84) %>%
   mutate(middle = middle/1000) %>%
   spread(name, middle) %>%
-  {ggplot(.,aes(beta0, rho, color=factor(year)))+
-      geom_path(size=0.8, alpha=0.8,
-                arrow = arrow(angle = 20, length=unit(0.4,"cm"), type = "closed",ends = "last"))+
-      geom_point(data=. %>% group_by(year) %>% summarize(beta0 = beta0[1], rho = rho[1]),
+  {ggplot(.,aes(beta0, rho))+
+      geom_path(aes(color=factor(year)), size=0.8, alpha=0.8)+
+      geom_point(data=. %>% group_by(year) %>% 
+                   summarize(beta0 = beta0[1], rho = rho[1]),
+                 aes(color=factor(year)),
                  size = 3)+
-      scale_color_brewer("",type = "div", palette="Spectral")+
+      geom_point(data=. %>% group_by(year) %>% 
+                   summarize(beta0 = beta0[length(beta0)], rho = rho[length(rho)]),
+                 aes(color=factor(year)),
+                 size = 4, shape=17)+
+      geom_text(data=. %>% group_by(year) %>% 
+                  summarize(beta0 = beta0[1] - 0.015, rho = rho[1] + 0.003),
+                aes(label=year))+
+      scale_color_manual("",values=c("gray70","gray40","gray10","black"), guide=F)+
       scale_y_continuous(expression("\u03C1 (g "*O[2]~m^{-2}~day^{-1}*")"))+
       scale_x_continuous(expression("\u03B2 (g "*O[2]~m^{-2}~day^{-1}*")"))+
       theme_base}
