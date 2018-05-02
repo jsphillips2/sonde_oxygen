@@ -40,7 +40,7 @@ sonde_prep = sonde %>%
   full_join(sonde %>% expand(year,yday,hour)) %>%
   mutate(do = 1000*do, do_eq = 1000*do_eq)
 
-#  examine plot to identify sparse time periods
+# examine plot to identify sparse time periods
 sonde_prep %>% 
   group_by(year,yday) %>% 
   summarize(do = mean(do, na.rm=T)) %>%
