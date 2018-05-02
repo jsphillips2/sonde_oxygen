@@ -17,7 +17,7 @@ theme_base = theme_bw()+
         strip.background=element_blank(),
         text = element_text(size=12),
         strip.text = element_text(size=10),
-        axis.text=element_text(size=10),
+        axis.text=element_text(size=10, color="black"),
         axis.title.y=element_text(margin=margin(0,15,0,0)),
         axis.title.x=element_text(margin=margin(15,0,0,0)))
 
@@ -149,21 +149,31 @@ met_d %>%
   theme_base
 
 # calculate correlation
-with(met_d, cor(GPP, ER))
+met_d %>% 
+with(cor(GPP, ER))
+
+# calculate correlation by year
+met_d %>%
+  split(.$year) %>%
+  lapply(function(x){with(x,cor(GPP, ER))})
 
 # means
-met_d %>% select(ER, GPP, NEP) %>%
-  apply(2, mean)
-
-
-
-
-
-#==========
-#========== Figure 4: Daily Responses
-#==========
-
 model_fit %>%
+  filter(name %in% c("GPP_mean","ER_mean","NEP_mean")) %>%
+  mutate(middle = middle/1000,
+         lower16 = lower16/1000,
+         upper84 = upper84/1000)
+
+
+
+
+
+#==========
+#========== Figure 5: Daily Responses
+#==========
+
+# prep data
+resp_d = model_fit %>%
   filter(name %in% c("beta0","rho")) %>%
   left_join(sonde_data %>%
               group_by(year, yday) %>%
@@ -172,7 +182,10 @@ model_fit %>%
          lower16 = lower16/1000,
          upper84 = upper84/1000,
          name = factor(name, levels=c("beta0","rho"), labels=c("\u03B2","\u03C1"))) %>%
-  arrange(year,yday) %>%
+  arrange(year,yday) 
+
+# plots
+resp_d %>%
   ggplot(aes(yday, middle, color=name))+
   facet_wrap(~year, labeller=label_parsed)+
   geom_ribbon(aes(ymin=lower16, ymax=upper84, fill=name),
@@ -184,6 +197,27 @@ model_fit %>%
                      breaks=c(0.15,0.3,0.45))+
   scale_x_continuous("Day of Year")+
   theme_base
+
+# calculate correlation
+resp_d %>% 
+  select(-lower16, -upper84) %>%
+  spread(name, middle) %>%
+with(cor(β, ρ))
+
+# calculate correlation (without 2017)
+resp_d %>% 
+  select(-lower16, -upper84) %>%
+  spread(name, middle) %>%
+  filter(year!=2017) %>%
+  with(cor(β, ρ))
+
+# calculate correlation for each year
+resp_d %>% 
+  select(-lower16, -upper84) %>%
+  spread(name, middle) %>%
+  split(.$year) %>%
+  lapply(function(x){with(x,cor(β, ρ))})
+  
 
 
 
@@ -221,4 +255,19 @@ model_fit %>%
 
 
 
+
+
+#==========
+#========== Appendix: Fixed Parameters
+#==========
+
+# pairs plot
+ggpairs(params_full %>% select(-step, -chain, -lp__))
+
+# values
+model_fit %>%
+  filter(name %in% 
+           c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc")) %>%
+  select(-index, -day)
+  
 
