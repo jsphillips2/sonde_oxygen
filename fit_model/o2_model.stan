@@ -111,11 +111,14 @@ generated quantities{
   real chi_obs_real;
   real chi_obs_sim;
   int pos;
-  vector[D] GPP;
-  vector[D] ER;
-  vector[D] NEP;
-  vector[D] AIR;
-  vector[D] Flux;
+  vector[D] GPP; // total daily flux
+  vector[D] ER; // total daily flux
+  vector[D] NEP; // total daily flux
+  vector[D] AIR; // total daily flux
+  vector[D] Flux; // total daily flux
+  real GPP_mean; // overall mean flux
+  real ER_mean; // overall mean flux
+  real NEP_mean; // overall mean flux
   for (t in 1:T_S){
     // set initial values to 0 (they don't make sense to calculate)
     error_proc_real[o2_st[t]] = 0;
@@ -152,6 +155,10 @@ generated quantities{
     NEP[d] = sum(nep[pos:(pos+23)]);
     AIR[d] = sum(air[pos:(pos+23)]);
     Flux[d] = (NEP[d] + AIR[d])/z;
-    pos = pos + 24; // advance counter
+    pos = pos + 24; // advance position counter
   }
+  // mean daily fluxes
+  GPP_mean = mean(GPP);
+  ER_mean = mean(ER);
+  NEP_mean = mean(NEP);
 }
