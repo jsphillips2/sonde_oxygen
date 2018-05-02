@@ -64,20 +64,20 @@ check_energy(fit)
 
 
 #==========
-#========== Additional diagnostics
+#========== Examine Chains
 #==========
 
 # fixed parameters by step
 fixed_par_v = c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc","lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
-  bind_cols()
-names(fixed_pars) = fixed_par_v
+  bind_cols() %>%
+  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2))))
+names(fixed_pars) = c(fixed_par_v,"chain","step")
 
 # examine chains for parameters
 fixed_pars %>%
-  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2)), chains)) %>%
-  gather(par, value, names(fixed_pars)) %>%
+  gather(par, value, -chain, -step) %>%
   filter(par != "lp__") %>%
   ggplot(aes(step, value, color=factor(chain)))+
   facet_wrap(~par, scales="free_y")+
@@ -99,8 +99,9 @@ ggpairs(fixed_pars)
 post_pred_v = c("chi_proc_real","chi_proc_sim","chi_obs_real","chi_obs_sim")
 post_pred = rstan::extract(fit, pars=post_pred_v) %>%
   lapply(as_data_frame) %>%
-  bind_cols()
-names(post_pred) = post_pred_v
+  bind_cols() %>%
+  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2))))
+names(post_pred) = c(post_pred_v,"chain","step")
 
 # process error
 post_pred %>%
@@ -122,9 +123,23 @@ post_pred %>%
   
 
 
+
 #==========
 #========== Prepare output for export
 #==========
+
+# beta0 and rho full
+beta0_rho_pars = c("beta0","rho")
+beta0_rho = rstan::extract(fit, pars=beta0_rho_pars) %>% 
+{lapply(1:2, function(x){y = .[[x]] %>% as_data_frame %>%
+  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2)))) %>%
+  gather(var, value, -chain, -step) %>%
+  mutate(day = strsplit(var, "V") %>% map_int(~as.integer(.x[2])),
+         name = beta0_rho_pars[x]) %>%
+  select(name, chain, step, day, value)
+return(y)
+})} %>%
+  bind_rows()
 
 # clean variable names in summary
 fit_clean = fit_summary %>%
@@ -139,6 +154,7 @@ fit_clean = fit_summary %>%
 output_path = paste0("model_output/",model)
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
 # write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
+# write_csv(beta0_rho, paste0(output_path,"/beta0_rho_full.csv"))
 # write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
 
 
