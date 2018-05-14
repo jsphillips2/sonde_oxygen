@@ -36,6 +36,7 @@ init_fn = function(){
 #==========
 #========== Fit model
 #==========
+
 # initial specifications
 model = "o2_model"
 model_path = paste0("fit_model/",model,".stan")
