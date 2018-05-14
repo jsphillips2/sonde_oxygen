@@ -8,8 +8,8 @@ library(matrixcalc)
 
 # import data and model fit
 sonde_data = read_csv("data/sonde_prep.csv")
-params_full = read_csv("model_output/o2_model/fixed_pars_full.csv")
-beta0_rho = read_csv("model_output/o2_model/beta0_rho_full.csv")
+params_full = read_csv("model_output/fixed_pars_full.csv")
+beta0_rho = read_csv("model_output/beta0_rho_full.csv")
 
 # base theme
 theme_base = theme_bw()+
@@ -185,23 +185,6 @@ gpp_part_sum = lapply(c(0.16,0.5,0.84), function(x){
 })
 names(gpp_part_sum) = c("lower16","middle","upper84")
 
-# plot contribution
-c("lower16","middle","upper84") %>%
-  lapply(function(x){
-    d = gpp_part_sum[[x]] %>%
-      select(param, cont100) %>%
-      mutate(bound = x) 
-  }) %>%
-  bind_rows() %>%
-  spread(bound, cont100) %>%
-  ggplot(aes(param, middle))+
-  geom_point(size=4)+
-  geom_errorbar(aes(ymin=lower16, ymax=upper84), width=0.1, size=0.8)+
-  scale_y_continuous("Contribution to Variance in GPP", limits=c(0,0.6))+
-  scale_x_discrete("",labels=c("Max Potential GPP \n(\u03B2)","Light","Temperature"))+
-  theme_base+
-  theme(axis.text.x=element_text(size=12))
-
 
 
 
@@ -239,22 +222,6 @@ er_part_sum = lapply(c(0.16,0.5,0.84), function(x){
 })
 names(er_part_sum) = c("lower16","middle","upper84")
 
-# plot
-c("lower16","middle","upper84") %>%
-  lapply(function(x){
-    d = er_part_sum[[x]] %>%
-      select(param, cont100) %>%
-      mutate(bound = x) 
-  }) %>%
-  bind_rows() %>%
-  spread(bound, cont100) %>%
-  ggplot(aes(param, middle))+
-  geom_point(size=4)+
-  geom_errorbar(aes(ymin=lower16, ymax=upper84), width=0.1, size=0.8)+
-  scale_y_continuous("Contribution to Variance in ER", limits=c(0,0.8))+
-  scale_x_discrete("",labels=c("Baseline ER \n(\u03C1)","Temperature"))+
-  theme_base+
-  theme(axis.text.x=element_text(size=12))
 
 
 
