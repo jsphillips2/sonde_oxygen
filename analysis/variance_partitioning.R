@@ -181,9 +181,13 @@ gpp_part = comb_data_trans$step %>%
 gpp_part_sum = lapply(c(0.16,0.5,0.84), function(x){
   gpp_part %>%
     group_by(param) %>%
-    summarize_all(funs(quantile), probs = x)
+    summarize_all(funs(quantile), probs = x) %>%
+    mutate(quant = x)
 })
 names(gpp_part_sum) = c("lower16","middle","upper84")
+
+# export
+# write_csv(gpp_part_sum %>% bind_rows, "analysis/tables/gpp_part.csv")
 
 
 
@@ -218,10 +222,12 @@ er_part = comb_data_trans$step %>%
 er_part_sum = lapply(c(0.16,0.5,0.84), function(x){
   er_part %>%
     group_by(param) %>%
-    summarize_all(funs(quantile), probs = x)
+    summarize_all(funs(quantile), probs = x) %>%
+    mutate(quant = x)
 })
 names(er_part_sum) = c("lower16","middle","upper84")
 
-
+# export
+# write_csv(er_part_sum %>% bind_rows, "analysis/tables/er_part.csv")
 
 
