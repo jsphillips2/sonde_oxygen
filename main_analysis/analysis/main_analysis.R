@@ -7,9 +7,9 @@ library(tidyverse)
 
 # import data and model fit
 sonde_data = read_csv("data/sonde_prep.csv")
-params_full = read_csv("model_output/fixed_pars_full.csv")
-post_pred = read_csv("model_output/post_pred_full.csv")
-model_fit = read_csv("model_output/summary_clean.csv")
+params_full = read_csv("main_analysis/model_output/fixed_pars_full.csv")
+post_pred = read_csv("main_analysis/model_output/post_pred_full.csv")
+model_fit = read_csv("main_analysis/model_output/summary_clean.csv")
 
 # base theme
 theme_base = theme_bw()+

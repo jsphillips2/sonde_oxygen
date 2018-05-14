@@ -8,8 +8,8 @@ library(matrixcalc)
 
 # import data and model fit
 sonde_data = read_csv("data/sonde_prep.csv")
-params_full = read_csv("model_output/fixed_pars_full.csv")
-beta0_rho = read_csv("model_output/beta0_rho_full.csv")
+params_full = read_csv("main_analysis/model_output/fixed_pars_full.csv")
+beta0_rho = read_csv("main_analysis/model_output/beta0_rho_full.csv")
 
 # base theme
 theme_base = theme_bw()+

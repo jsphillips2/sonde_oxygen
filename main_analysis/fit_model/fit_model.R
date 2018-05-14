@@ -6,7 +6,7 @@
 library(tidyverse)
 library(rstan)
 library(GGally)
-source("fit_model/stan_utility.R")
+source("main_analysis/fit_model/stan_utility.R")
 
 # stan settings
 rstan_options(auto_write = TRUE)
@@ -39,7 +39,7 @@ init_fn = function(){
 
 # initial specifications
 model = "o2_model"
-model_path = paste0("fit_model/",model,".stan")
+model_path = paste0("main_analysis/fit_model/",model,".stan")
 chains = 1
 iter = 1000
 
@@ -152,7 +152,7 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # Export
-output_path = "model_output"
+output_path = "main_analysis/model_output"
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
 # write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
 # write_csv(beta0_rho, paste0(output_path,"/beta0_rho_full.csv"))
