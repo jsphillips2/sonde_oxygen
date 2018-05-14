@@ -152,7 +152,7 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # Export
-output_path = paste0("model_output/",model)
+output_path = "model_output"
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
 # write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
 # write_csv(beta0_rho, paste0(output_path,"/beta0_rho_full.csv"))
