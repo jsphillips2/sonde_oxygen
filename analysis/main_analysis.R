@@ -16,7 +16,8 @@ theme_base = theme_bw()+
   theme(panel.grid=element_blank(),
         strip.background=element_blank(),
         text = element_text(size=12),
-        strip.text = element_text(size=10),
+        strip.text = element_text(size=12),
+        legend.text = element_text(size=12),
         axis.text=element_text(size=10, color="black"),
         axis.title.y=element_text(margin=margin(0,15,0,0)),
         axis.title.x=element_text(margin=margin(15,0,0,0)))
@@ -84,9 +85,12 @@ model_fit %>%
   geom_line()+
   scale_color_manual("",values=c("gray50","black"))+
   scale_size_manual("",values=c(0.5,0.7))+
-  scale_y_continuous(expression("Net Flux (g "*O[2]~m^{-2}~day^{-1}*")"))+
-  scale_x_continuous("Day of Year")+
-  theme_base
+  scale_y_continuous(expression("Net Flux (g "*O[2]~m^{-2}~day^{-1}*")"),
+                     limits=c(-2,2), breaks=c(-1.5,0,1.5))+
+  scale_x_continuous("Day of Year", 
+                     limits=c(150,240), breaks=c(160,180,200,220))+
+  theme_base+
+  theme(legend.position = c(0.87,0.924))
 
 
 
@@ -116,7 +120,8 @@ model_fit %>%
       scale_fill_manual("",values=c("dodgerblue","gray40","firebrick"))+
       scale_y_continuous(expression("Metabolism (g "*O[2]~m^{-2}~day^{-1}*")"))+
       scale_x_continuous("Day of Year")+
-      theme_base
+      theme_base+
+      theme(legend.position = c(0.9,0.9))
   }
   
 
@@ -146,7 +151,8 @@ met_d %>%
   scale_y_continuous(expression("ER (g "*O[2]~m^{-2}~day^{-1}*")"), limits=c(2,9))+
   scale_x_continuous(expression("GPP (g "*O[2]~m^{-2}~day^{-1}*")"), limits=c(2,9))+
   coord_equal()+
-  theme_base
+  theme_base+
+  theme(legend.position = c(0.1,0.85))
 
 # calculate correlation
 met_d %>% 
@@ -180,23 +186,27 @@ resp_d = model_fit %>%
               summarize(day = unique(D_M))) %>%
   mutate(middle = middle/1000,
          lower16 = lower16/1000,
-         upper84 = upper84/1000,
-         name = factor(name, levels=c("beta0","rho"), labels=c("\u03B2","\u03C1"))) %>%
-  arrange(year,yday) 
+         upper84 = upper84/1000) %>%
+  arrange(year,yday)
 
 # plots
 resp_d %>%
   ggplot(aes(yday, middle, color=name))+
   facet_wrap(~year, labeller=label_parsed)+
+  geom_hline(yintercept = 0.3, alpha=0.5, size=0.5)+
   geom_ribbon(aes(ymin=lower16, ymax=upper84, fill=name),
                 linetype=0, alpha=0.35)+
   geom_line(size=0.6)+
-  scale_color_manual("",values=c("dodgerblue","firebrick"))+
-  scale_fill_manual("",values=c("dodgerblue","firebrick"))+
+  scale_color_manual("",values=c("dodgerblue","firebrick"), 
+                     labels = c(expression(beta^0), expression(rho)))+
+  scale_fill_manual("",values=c("dodgerblue","firebrick"), 
+                    labels = c(expression(beta^0), expression(rho)))+
   scale_y_continuous(expression("Metabolism Parameter (g "*O[2]~m^{-2}~h^{-1}*")"),
                      breaks=c(0.15,0.3,0.45))+
   scale_x_continuous("Day of Year")+
-  theme_base
+  theme_base+
+  theme(legend.text.align = 0,
+        legend.position = c(0.9,0.9))
 
 # calculate correlation
 resp_d %>% 
@@ -249,8 +259,8 @@ model_fit %>%
                   summarize(beta0 = beta0[1] - 0.015, rho = rho[1] + 0.003),
                 aes(label=year))+
       scale_color_manual("",values=c("gray70","gray40","gray10","black"), guide=F)+
-      scale_y_continuous(expression("\u03C1 (g "*O[2]~m^{-2}~day^{-1}*")"))+
-      scale_x_continuous(expression("\u03B2 (g "*O[2]~m^{-2}~day^{-1}*")"))+
+      scale_x_continuous(expression(beta^0~"("*g~O[2]~m^{-2}~day^{-1}*")"))+
+      scale_y_continuous(expression(rho~"("*g~O[2]~m^{-2}~day^{-1}*")"))+
       theme_base}
 
 
