@@ -22,6 +22,7 @@ init_fn = function(){
     gamma_1 = runif(1, 1, 2),
     gamma_2 = runif(1, 1, 2),
     sig_beta = runif(1, 0, 2),
+    sig_alpha = runif(1, 0, 2),
     sig_rho = runif(1, 0, 2),
     sig_proc = runif(1, 50, 150),
     log_beta0 = runif(data$D, log(0.75) + 6, log(1.25) + 6),
@@ -69,7 +70,7 @@ check_energy(fit)
 #==========
 
 # fixed parameters by step
-fixed_par_v = c("alpha","gamma_1","gamma_2","k0","k1","sig_beta0","sig_rho","sig_proc","lp__")
+fixed_par_v = c("gamma_1","gamma_2","k0","k1","sig_beta0","sig_alpha","sig_rho","sig_proc","lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
@@ -86,7 +87,7 @@ fixed_pars %>%
   theme_bw()
 
 # pairs plot for parameters
-ggpairs(fixed_pars)
+ggpairs(fixed_pars %>% select(-chain, -step))
 
 
 
@@ -130,13 +131,13 @@ post_pred %>%
 #==========
 
 # beta0 and rho full
-beta0_rho_pars = c("beta0","rho")
-beta0_rho = rstan::extract(fit, pars=beta0_rho_pars) %>% 
-{lapply(1:2, function(x){y = .[[x]] %>% as_data_frame %>%
+daily_pars = c("beta0","alpha","rho")
+daily = rstan::extract(fit, pars=daily_pars) %>% 
+{lapply(1:3, function(x){y = .[[x]] %>% as_data_frame %>%
   mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2)))) %>%
   gather(var, value, -chain, -step) %>%
   mutate(day = strsplit(var, "V") %>% map_int(~as.integer(.x[2])),
-         name = beta0_rho_pars[x]) %>%
+         name = daily_pars[x]) %>%
   select(name, chain, step, day, value)
 return(y)
 })} %>%
@@ -147,7 +148,7 @@ fit_clean = fit_summary %>%
   rename(lower16 = `16%`, middle = `50%`, upper84 = `84%`)  %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])),
-         day = ifelse(name %in% c("beta0","rho","GPP","ER","NEP","AIR","Flux"), index, data$D_M[index])) %>%
+         day = ifelse(name %in% c("beta0","alpha","rho","GPP","ER","NEP","AIR","Flux"), index, data$D_M[index])) %>%
   select(name, index, day, middle, lower16, upper84) %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
@@ -155,7 +156,7 @@ fit_clean = fit_summary %>%
 output_path = "main_analysis/model_output"
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
 # write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
-# write_csv(beta0_rho, paste0(output_path,"/beta0_rho_full.csv"))
+# write_csv(daily, paste0(output_path,"/daily_full.csv"))
 # write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
 
 
