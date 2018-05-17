@@ -19,15 +19,15 @@ data {
   vector<lower=0>[N] sch_conv; // Schmidt number conversion
   real<lower=0> z; // mixing depth [m]
   real<lower=0> temp_ref; // reference temperature [C]
-  real<lower=0> k0; // gas exchange constant 1
-  real<lower=0> k1; // gas exchange constant 2
-  real<lower=0> k3; // gas exhange constant 3
+  real<lower=0> k2; // gas exhange constant 2
   real<lower=0> sig_obs; // observation error sd [g m^-3]
 }
 parameters{
   real<lower=0> alpha; // slope of gpp ~ light at low light
   real<lower=1> gamma_1; // scaling of gpp with temperature
   real<lower=1> gamma_2; // scaling of er with temperature
+  real<lower=0> k0; // gas exchange constant 0 
+  real<lower=0> k1; // gas exchange constant 1
   real<lower=0> sig_beta0; // sd of log_beta0 random walk 
   real<lower=0> sig_rho; // sd of log_rho random walk 
   real<lower=0> sig_proc; // sd of oxygen state process error
@@ -69,7 +69,7 @@ transformed parameters {
     gpp[n] = beta[n]*tanh((alpha/beta[n])*light[n]);
     er[n] = rho[D_M[n]]*gamma_2^(temp[n] - temp_ref);
     nep[n] = gpp[n] - er[n];
-    air[n] = ((k0 + k1*wspeed[n]^k3)/100)*sch_conv[n]*(o2_eq[n] - o2[n]);
+    air[n] = ((k0 + k1*wspeed[n]^k2)/100)*sch_conv[n]*(o2_eq[n] - o2[n]);
     o2_pred[n] = o2[n] + (nep[n] + air[n])/z;
   }
 }
@@ -78,6 +78,8 @@ model {
   alpha ~ normal(3, 1.5) T[0, ]; 
   gamma_1 ~ normal(1.1, 0.4) T[1, ]; 
   gamma_2 ~ normal(1.1, 0.4) T[1, ]; 
+  k0 ~ normal(2, 2) T[0, ]; 
+  k1 ~ normal(0.2, 0.2) T[0, ]; 
   sig_beta0 ~ normal(0.5, 0.6) T[0, ]; 
   sig_rho ~ normal(0.5, 0.6) T[0, ]; 
   sig_proc ~ normal(100, 100) T[0, ]; 
