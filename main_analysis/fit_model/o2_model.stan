@@ -23,25 +23,29 @@ data {
   real<lower=0> sig_obs; // observation error sd [g m^-3]
 }
 parameters{
-  real<lower=0> alpha; // slope of gpp ~ light at low light
   real<lower=1> gamma_1; // scaling of gpp with temperature
   real<lower=1> gamma_2; // scaling of er with temperature
-  real<lower=0> k0; // gas exchange constant 0 
+  real<lower=0> k0; // gas exchange constant 0
   real<lower=0> k1; // gas exchange constant 1
   real<lower=0> sig_beta0; // sd of log_beta0 random walk 
+  real<lower=0> sig_alpha; // sd of log_rho random walk 
   real<lower=0> sig_rho; // sd of log_rho random walk 
   real<lower=0> sig_proc; // sd of oxygen state process error
   vector[N] o2; // inferred oxygen state [g m^-3]
   vector[Y] log_beta0_init; // initial value for log_beta0
+  vector[Y] log_alpha_init; // initial value for log_beta0
   vector[Y] log_rho_init; // initial value for log_rho
-  vector[N] z_beta0; // z value for non-centered parameterization
-  vector[N] z_rho; // z value for non-centered parameterization
+  vector[D] z_beta0; // z value for non-centered parameterization
+  vector[D] z_alpha; // z value for non-centered parameterization
+  vector[D] z_rho; // z value for non-centered parameterization
 }
 transformed parameters {
   // declare variables
   vector[D] log_beta0; // max gpp at temp_ref (log scale)
+  vector[D] log_alpha; // max gpp at temp_ref (log scale)
   vector[D] log_rho; // er at temp_ref (log scale)
   vector<lower=0>[D] beta0; // max gpp at temp_ref [g m^-2 h^-1]
+  vector<lower=0>[D] alpha; // max gpp at temp_ref [g m^-2 h^-1]
   vector<lower=0>[D] rho; // er at temp_ref [g m^-2 h^-1]
   vector<lower=0>[N] beta; // max gpp at high light [g m^-2 h^-1]
   vector<lower=0>[N] gpp; // gpp [g m^-2 h^-1]
@@ -53,20 +57,23 @@ transformed parameters {
   for (y in 1:Y) {
     // inital value
     log_beta0[dy_st[y]] = log_beta0_init[y];
+    log_alpha[dy_st[y]] = log_alpha_init[y];
     log_rho[dy_st[y]] = log_rho_init[y];
     // random walk
     for (d in (dy_st[y]+1):(dy_st[y]+K[y]-1)){
       log_beta0[d] = log_beta0[d-1] + sig_beta0*z_beta0[d-1];
+      log_alpha[d] = log_alpha[d-1] + sig_alpha*z_alpha[d-1];
       log_rho[d] = log_rho[d-1] + sig_rho*z_rho[d-1]; 
     }
   }
   // exp parameters
   beta0 = exp(log_beta0); 
+  alpha = exp(log_alpha);
   rho = exp(log_rho);
   // predicted oxygen 
   for (n in 1:N) {
     beta[n] = beta0[D_M[n]]*gamma_1^(temp[n] - temp_ref);
-    gpp[n] = beta[n]*tanh((alpha/beta[n])*light[n]);
+    gpp[n] = beta[n]*tanh((alpha[D_M[n]]/beta[n])*light[n]);
     er[n] = rho[D_M[n]]*gamma_2^(temp[n] - temp_ref);
     nep[n] = gpp[n] - er[n];
     air[n] = ((k0 + k1*wspeed[n]^k2)/100)*sch_conv[n]*(o2_eq[n] - o2[n]);
@@ -75,19 +82,21 @@ transformed parameters {
 }
 model {
   // priors
-  alpha ~ normal(3, 1.5) T[0, ]; 
   gamma_1 ~ normal(1.1, 0.4) T[1, ]; 
   gamma_2 ~ normal(1.1, 0.4) T[1, ]; 
   k0 ~ normal(2, 2) T[0, ]; 
   k1 ~ normal(0.2, 0.2) T[0, ]; 
   sig_beta0 ~ normal(0.5, 0.6) T[0, ]; 
+  sig_alpha ~ normal(0.5, 0.6) T[0, ]; 
   sig_rho ~ normal(0.5, 0.6) T[0, ]; 
   sig_proc ~ normal(100, 100) T[0, ]; 
   // initial values
   log_beta0_init ~ normal(6, 0.6); 
+  log_alpha_init ~ normal(1, 0.1); 
   log_rho_init ~ normal(5.5, 0.6); 
   // z values for non-centered parameterization
   z_beta0 ~ normal(0, 1);
+  z_alpha ~ normal(0, 1);
   z_rho ~ normal(0, 1);
   // state process
   for (t in 1:T_S) {
