@@ -9,7 +9,7 @@ library(matrixcalc)
 # import data and model fit
 sonde_data = read_csv("data/sonde_prep.csv")
 params_full = read_csv("main_analysis/model_output/fixed_pars_full.csv")
-beta0_rho = read_csv("main_analysis/model_output/beta0_rho_full.csv")
+daily = read_csv("main_analysis/model_output/daily_full.csv")
 
 # base theme
 theme_base = theme_bw()+
@@ -30,14 +30,14 @@ theme_base = theme_bw()+
 #==========
 
 # combine data
-comb_data = beta0_rho %>%
+comb_data = daily %>%
   spread(name, value) %>%
   full_join(params_full) %>%
   left_join(sonde_data %>%
               rename(day = D_M) %>%
               select(year,yday,day,hour,par,temp) %>%
               na.omit()) %>%
-  select(chain,step,year,yday,hour,par,temp,beta0,rho,alpha,gamma_1,gamma_2) %>%
+  select(chain,step,year,yday,hour,par,temp,beta0,alpha,rho,alpha,gamma_1,gamma_2) %>%
   mutate(temp_ref = mean(temp))
 
 
