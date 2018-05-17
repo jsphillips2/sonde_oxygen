@@ -159,9 +159,7 @@ K = {sonde_prep3 %>%
 temp_ref = mean(sonde_prep3$temp)
 z = 3.3
 sig_obs = 10
-k0 = 2.07
-k1 = 0.215
-k3 = 1.7
+k2 = 1.7
 N = length(o2_obs)
 T_S = length(S) 
 D = sum(K)
@@ -172,6 +170,6 @@ dy_st = c(1, cumsum((K)[1:(Y-1)]) + 1)
 # export as .R
 # stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
 #              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
-#              "sch_conv","z","sig_obs","k0","k1","k3"), file="data/sonde_list.R")
+#              "sch_conv","z","sig_obs","k2"), file="data/sonde_list.R")
 
 
