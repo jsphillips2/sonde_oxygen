@@ -115,10 +115,3 @@ test %>%
   geom_line(aes(yday, wspeed), color="red")+
   geom_hline(yintercept=0, size=0.5)+
   theme_base
-
-test %>% 
-  select(-yday, -Flux, -Observed) %>%
-  group_by(year) %>%
-  na.omit() %>%
-  mutate(Error = abs(Error)) %>%
-  summarize_all(funs(mean, sd))
