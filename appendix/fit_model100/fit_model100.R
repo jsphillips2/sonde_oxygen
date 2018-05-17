@@ -43,7 +43,7 @@ init_fn = function(){
 # initial specifications
 model = "o2_model"
 model_path = paste0("fit_model/",model,".stan")
-chains = 1
+chains = 3
 iter = 1000
 
 # fit model
@@ -76,7 +76,7 @@ fixed_par_v = c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc","lp
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
-  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2))))
+  mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains))
 names(fixed_pars) = c(fixed_par_v,"chain","step")
 
 # examine chains for parameters
@@ -89,7 +89,7 @@ fixed_pars %>%
   theme_bw()
 
 # pairs plot for parameters
-ggpairs(fixed_pars)
+ggpairs(fixed_pars %>% select(-chain, -step))
 
 
 
