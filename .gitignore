@@ -37,3 +37,4 @@ vignettes/*.pdf
 *.rds
 .DS_Store
 *.docx
+*.pdf
