@@ -85,7 +85,7 @@ f2 = model_fit %>%
   gather(var, value, c(middle,d_do)) %>%
   mutate(var = ifelse(var=="middle","NEP + AIR","Observed"),
          var = factor(var, levels=c("Observed","NEP + AIR")),
-         value = value/1000) %>%
+         value = 3.3*value/1000) %>%
   ggplot(aes(yday, value, color=var, size=var))+
   facet_wrap(~year)+
   geom_hline(yintercept = 0, alpha=0.5, size=0.5)+
@@ -93,7 +93,7 @@ f2 = model_fit %>%
   scale_color_manual("",values=c("gray50","black"))+
   scale_size_manual("",values=c(0.5,0.7))+
   scale_y_continuous(expression(Net~Flux~"("*g~O[2]~m^{-2}~day^{-1}*")"),
-                     limits=c(-2,2), breaks=c(-1.5,0,1.5))+
+                     limits=c(-6,6), breaks=c(-4,0,4))+
   scale_x_continuous("Day of Year", 
                      limits=c(150,240), breaks=c(165,195,225))+
   theme_base+
