@@ -69,7 +69,7 @@ check_energy(fit)
 #==========
 
 # fixed parameters by step
-fixed_par_v = c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc","lp__")
+fixed_par_v = c("alpha","gamma_1","gamma_2","k0","k1","sig_beta0","sig_rho","sig_proc","lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
