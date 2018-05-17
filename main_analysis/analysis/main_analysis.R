@@ -61,8 +61,8 @@ f1 = lapply(1:length(post_pred_split), function(x){
 
 # examine and export
 f1
-ggsave("analysis/figures/fig_1.pdf", f1, dpi = 300,
-       height = 6, width = 3.5, units = "in")
+# ggsave("main_analysis/analysis/figures/fig_1.pdf", f1, dpi = 300,
+#        height = 6, width = 3.5, units = "in")
 
 
 
@@ -101,8 +101,8 @@ f2 = model_fit %>%
 
 # examine and export
 f2
-ggsave("analysis/figures/fig_2.pdf", f2, dpi = 300,
-       height = 5, width = 5, units = "in")
+# ggsave("main_analysis/analysis/figures/fig_2.pdf", f2, dpi = 300,
+#        height = 5, width = 5, units = "in")
 
 
 
@@ -141,8 +141,8 @@ f3 = model_fit %>%
   
 # examine and export
 f3
-ggsave("analysis/figures/fig_3.pdf", f3, dpi = 300,
-       height = 5, width = 5, units = "in")
+# ggsave("main_analysis/analysis/figures/fig_3.pdf", f3, dpi = 300,
+#        height = 5, width = 5, units = "in")
 
 
 
@@ -179,8 +179,8 @@ f4 = met_d %>%
 
 # examine and export
 f4
-ggsave("analysis/figures/fig_4.pdf", f4, dpi = 300,
-       height = 3.5, width = 3.5, units = "in")
+# ggsave("main_analysis/analysis/figures/fig_4.pdf", f4, dpi = 300,
+#        height = 3.5, width = 3.5, units = "in")
 
 # calculate correlation
 met_d %>% 
@@ -239,8 +239,8 @@ f5 = resp_d %>%
 
 # examine and export
 f5
-ggsave("analysis/figures/fig_5.pdf", f5, dpi = 300,
-       height = 5, width = 5, units = "in")
+# ggsave("main_analysis/analysis/figures/fig_5.pdf", f5, dpi = 300,
+#        height = 5, width = 5, units = "in")
 
 # calculate correlation
 resp_d %>% 
@@ -267,10 +267,42 @@ resp_d %>%
 
 
 #==========
-#========== Figure 6: beta0 vs. rho
+#========== Figure 6: Alpha
 #==========
 
 f6 = model_fit %>%
+  filter(name %in% c("alpha")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  mutate(middle = middle/1000,
+         lower16 = lower16/1000,
+         upper84 = upper84/1000) %>%
+  arrange(year,yday) %>%
+  ggplot(aes(yday, middle))+
+  facet_wrap(~year)+
+  geom_ribbon(aes(ymin=lower16, ymax=upper84),
+              linetype=0, alpha=0.35)+
+  geom_line(size=0.6)+
+  scale_y_continuous(expression(alpha~"("*g~O[2]~m^{-2}~h^{-1}*")"))+
+  scale_x_continuous("Day of Year", 
+                     limits=c(150,240), breaks=c(165,195,225))+
+  theme_base
+
+# examine and export
+f6
+# ggsave("main_analysis/analysis/figures/fig_6.pdf", f6, dpi = 300,
+#        height = 5, width = 5, units = "in")
+
+
+
+
+
+#==========
+#========== Figure 7: beta0 vs. rho
+#==========
+
+f7 = model_fit %>%
   filter(name %in% c("beta0","rho")) %>%
   left_join(sonde_data %>%
               group_by(year, yday) %>%
@@ -293,16 +325,14 @@ f6 = model_fit %>%
                   summarize(beta0 = beta0[1] - 0.02, rho = rho[1] + 0.003), 
                 aes(label=year), size = 3.5)+
       scale_color_manual("",values=c("gray70","gray40","gray25","black"), guide=F)+
-      scale_y_continuous(expression(rho~"("*g~O[2]~m^{-2}~day^{-1}*")"),
-                         limits=c(0.12, 0.25), breaks=c(0.14,0.19,0.24))+
-      scale_x_continuous(expression(beta^0~"("*g~O[2]~m^{-2}~day^{-1}*")"),
-                         limits=c(0.24, 0.46), breaks=c(0.27,0.36,0.44))+
+      scale_y_continuous(expression(rho~"("*g~O[2]~m^{-2}~h^{-1}*")"))+
+      scale_x_continuous(expression(beta^0~"("*g~O[2]~m^{-2}~h^{-1}*")"))+
       theme_base}
 
 # examine and export
-f6
-ggsave("analysis/figures/fig_6.pdf", f6, dpi = 300,
-       height = 3.5, width = 3.5, units = "in")
+f7
+# ggsave("main_analysis/analysis/figures/fig_7.pdf", f7, dpi = 300,
+#        height = 3.5, width = 3.5, units = "in")
 
 
 
