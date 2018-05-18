@@ -104,7 +104,7 @@ post_pred_v = c("chi_proc_real","chi_proc_sim","chi_obs_real","chi_obs_sim")
 post_pred = rstan::extract(fit, pars=post_pred_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
-  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2))))
+  mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains))
 names(post_pred) = c(post_pred_v,"chain","step")
 
 # process error
@@ -136,7 +136,7 @@ post_pred %>%
 beta0_rho_pars = c("beta0","rho")
 beta0_rho = rstan::extract(fit, pars=beta0_rho_pars) %>% 
 {lapply(1:2, function(x){y = .[[x]] %>% as_data_frame %>%
-  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2)))) %>%
+  mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains)) %>%
   gather(var, value, -chain, -step) %>%
   mutate(day = strsplit(var, "V") %>% map_int(~as.integer(.x[2])),
          name = beta0_rho_pars[x]) %>%
