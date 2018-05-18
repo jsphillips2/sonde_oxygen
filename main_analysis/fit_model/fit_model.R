@@ -45,7 +45,7 @@ chains = 1
 iter = 1000
 
 # fit model
-fit = stan(file=model_path, data=data, seed=194838, chains = chains,
+fit = stan(file=model_path, data=data, seed=1, chains = chains,
            init = init_fn, iter = iter)
 
 # summary of fit
@@ -74,7 +74,7 @@ fixed_par_v = c("gamma_1","gamma_2","k0","k1","sig_beta0","sig_alpha","sig_rho",
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
-  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2))))
+  mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains))
 names(fixed_pars) = c(fixed_par_v,"chain","step")
 
 # examine chains for parameters
@@ -102,7 +102,7 @@ post_pred_v = c("chi_proc_real","chi_proc_sim","chi_obs_real","chi_obs_sim")
 post_pred = rstan::extract(fit, pars=post_pred_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
-  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2))))
+  mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains))
 names(post_pred) = c(post_pred_v,"chain","step")
 
 # process error
@@ -134,7 +134,7 @@ post_pred %>%
 daily_pars = c("beta0","alpha","rho")
 daily = rstan::extract(fit, pars=daily_pars) %>% 
 {lapply(1:3, function(x){y = .[[x]] %>% as_data_frame %>%
-  mutate(chain = rep(chains, each = iter/2), step = rep(c(1:(iter/2)))) %>%
+  mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains)) %>%
   gather(var, value, -chain, -step) %>%
   mutate(day = strsplit(var, "V") %>% map_int(~as.integer(.x[2])),
          name = daily_pars[x]) %>%
