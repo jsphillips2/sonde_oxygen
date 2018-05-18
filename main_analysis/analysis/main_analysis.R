@@ -203,7 +203,7 @@ model_fit %>%
 
 
 #==========
-#========== Figure 5: Daily Responses
+#========== Figure 5: beta and rho
 #==========
 
 # prep data
@@ -267,7 +267,7 @@ resp_d %>%
 
 
 #==========
-#========== Figure 6: Alpha
+#========== Figure 6: alpha
 #==========
 
 f6 = model_fit %>%
@@ -275,16 +275,16 @@ f6 = model_fit %>%
   left_join(sonde_data %>%
               group_by(year, yday) %>%
               summarize(day = unique(D_M))) %>%
-  mutate(middle = middle/1000,
-         lower16 = lower16/1000,
-         upper84 = upper84/1000) %>%
+  mutate(middle = middle,
+         lower16 = lower16,
+         upper84 = upper84) %>%
   arrange(year,yday) %>%
   ggplot(aes(yday, middle))+
   facet_wrap(~year)+
   geom_ribbon(aes(ymin=lower16, ymax=upper84),
               linetype=0, alpha=0.35)+
   geom_line(size=0.6)+
-  scale_y_continuous(expression(alpha~"("*g~O[2]~m^{-2}~h^{-1}*")"))+
+  scale_y_continuous(expression(alpha~"("*mg~O[2]~s~mu*mol-photons^{-1}~h^{-1}*")"))+
   scale_x_continuous("Day of Year", 
                      limits=c(150,240), breaks=c(165,195,225))+
   theme_base
