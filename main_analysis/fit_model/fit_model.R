@@ -87,7 +87,7 @@ fixed_pars %>%
   theme_bw()
 
 # pairs plot for parameters
-ggpairs(fixed_pars %>% select(-chain, -step))
+# ggpairs(fixed_pars %>% select(-chain, -step))
 
 
 
