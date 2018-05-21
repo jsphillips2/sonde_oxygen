@@ -150,22 +150,22 @@ temp = sonde_prep3$temp
 wspeed = sonde_prep3$wspeed
 sch_conv = sonde_prep3$sch_conv
 D_M = sonde_prep3$D_M
-S = {sonde_prep3 %>%
+S = c({sonde_prep3 %>%
     group_by(T_S) %>%
-    summarize(value = length(T_S))}$value 
-K = {sonde_prep3 %>%
+    summarize(value = length(T_S))}$value,1) 
+K = c({sonde_prep3 %>%
     group_by(year) %>%
-    summarize(value = length(unique(D_M)))}$value
-temp_ref = mean(sonde_prep3$temp)
+    summarize(value = length(unique(D_M)))}$value,1)
+temp_ref = 11.99139
 z = 3.3
 sig_obs = 10
 k2 = 1.7
 N = length(o2_obs)
-T_S = length(S) 
-D = sum(K)
-Y = length(K)
-o2_st = c(1, cumsum((S)[1:(T_S-1)]) + 1)
-dy_st = c(1, cumsum((K)[1:(Y-1)]) + 1) 
+T_S = length(S)-1 
+D = sum(K)-1
+Y = length(K)-1
+o2_st = c(1, if(Y < 2) 1 else c(cumsum((S)[1:(T_S-1)]) + 1, 1))
+dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
 
 # export as .R
 # stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
