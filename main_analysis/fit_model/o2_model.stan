@@ -6,10 +6,10 @@ data {
   int D; // number of days
   int T_S; // number of time series
   int D_M[N]; // mapping of observations to days
-  int K[Y]; // number of days in each year
-  int S[T_S]; // number of steps in each time series
-  int o2_st[T_S]; // starting positions for each time series
-  int dy_st[Y]; // starting positions for each day
+  int K[Y+1]; // number of days in each year
+  int S[T_S+1]; // number of steps in each time series
+  int o2_st[T_S+1]; // starting positions for each time series
+  int dy_st[Y+1]; // starting positions for each day
   // actual data
   vector<lower=0>[N] o2_obs; // observed oxygen [g m^-3]
   vector<lower=0>[N] o2_eq; // equilibrium oxygen [g m^-3] 
@@ -32,9 +32,9 @@ parameters{
   real<lower=0> sig_rho; // sd of log_rho random walk 
   real<lower=0> sig_proc; // sd of oxygen state process error
   vector[N] o2; // inferred oxygen state [g m^-3]
-  vector[Y] log_beta0_init; // initial value for log_beta0
-  vector[Y] log_alpha_init; // initial value for log_beta0
-  vector[Y] log_rho_init; // initial value for log_rho
+  vector[Y+1] log_beta0_init; // initial value for log_beta0
+  vector[Y+1] log_alpha_init; // initial value for log_beta0
+  vector[Y+1] log_rho_init; // initial value for log_rho
   vector[D] z_beta0; // z value for non-centered parameterization
   vector[D] z_alpha; // z value for non-centered parameterization
   vector[D] z_rho; // z value for non-centered parameterization
