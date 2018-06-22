@@ -46,7 +46,7 @@ chains = 1
 iter = 1000
 
 # fit model
-fit = stan(file=model_path, data=data, seed=1, chains = chains,
+fit = stan(file = model_path, data = data, seed=1, chains = chains,
            init = init_fn, iter = iter)
 
 # summary of fit
@@ -111,8 +111,8 @@ post_pred %>%
   ggplot(aes(chi_proc_real,chi_proc_sim))+
   geom_point()+
   geom_abline(intercept=0, slope=1)+
-  scale_y_continuous(limits=c(4800,5600))+
-  scale_x_continuous(limits=c(4800,5600))+
+  scale_y_continuous(limits=c(5000,5900))+
+  scale_x_continuous(limits=c(5000,5900))+
   theme_bw()
 
 # observation error
@@ -120,8 +120,8 @@ post_pred %>%
   ggplot(aes(chi_obs_real,chi_obs_sim))+
   geom_point()+
   geom_abline(intercept=0, slope=1)+
-  scale_y_continuous(limits=c(4800,5600))+
-  scale_x_continuous(limits=c(4800,5600))+
+  scale_y_continuous(limits=c(5000,5900))+
+  scale_x_continuous(limits=c(5000,5900))+
   theme_bw()
   
 
