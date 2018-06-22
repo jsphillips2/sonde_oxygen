@@ -52,10 +52,10 @@ f1 = lapply(1:length(post_pred_split), function(x){
   facet_wrap(~Stoch, nrow=2)+
   geom_point(size=2, alpha=0.5)+
   geom_abline(intercept=0, slope=1)+
-  scale_y_continuous(expression(chi^2~"Simulated"), limits=c(4750,5600), 
-                     breaks=c(4900,5200,5500))+
-  scale_x_continuous(expression(chi^2~"Real"),limits=c(4750,5600), 
-                     breaks=c(4900,5200,5500))+
+  scale_y_continuous(expression(chi^2~"Simulated"), limits=c(5000,5900), 
+                     breaks=c(5200,5500,5800))+
+  scale_x_continuous(expression(chi^2~"Real"),limits=c(5000,5900), 
+                     breaks=c(5200,5500,5800))+
   coord_equal()+
   theme_base
 
@@ -93,11 +93,11 @@ f2 = model_fit %>%
   scale_color_manual("",values=c("gray50","black"))+
   scale_size_manual("",values=c(0.5,0.7))+
   scale_y_continuous(expression(Net~Flux~"("*g~O[2]~m^{-2}~day^{-1}*")"),
-                     limits=c(-6,6), breaks=c(-4,0,4))+
+                     limits=c(-6,8), breaks=c(-4,0,4))+
   scale_x_continuous("Day of Year", 
                      limits=c(150,240), breaks=c(165,195,225))+
   theme_base+
-  theme(legend.position = c(0.87,0.91))
+  theme(legend.position = c(0.65,0.916))
 
 # examine and export
 f2
