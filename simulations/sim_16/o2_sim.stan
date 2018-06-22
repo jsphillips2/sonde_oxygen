@@ -46,8 +46,6 @@ transformed data{
     // initial oxygen values
     o2_s[o2_st[t]] = o2_obs[o2_st[t]];
     for(n in (o2_st[t]+1):(o2_st[t]+S[t])){
-      // beta_s[n-1] = beta0_f[D_M[n-1]]*gamma_1_f^(temp[n-1] - temp_ref);
-      //gpp_s[n-1] = beta_s[n-1]*tanh((alpha_f[D_M[n-1]]/beta_s[n-1])*light[n-1]);
       gpp_s[n-1] = beta_f[n-1]*tanh((alpha_f[D_M[n-1]]/beta_f[n-1])*light[n-1]);
       er_s[n-1] = rho_f[D_M[n-1]]*gamma_2_f^(temp[n-1] - temp_ref);
       nep_s[n-1] = gpp_s[n-1] - er_s[n-1];
@@ -133,7 +131,7 @@ model {
   // initial values
   log_beta0_init ~ normal(6, 0.6); 
   log_alpha_init ~ normal(1, 0.1); 
-  log_rho_init ~ normal(5.5, 0.6); 
+  log_rho_init ~ normal(5, 0.5); 
   // z values for non-centered parameterization
   z_beta0 ~ normal(0, 1);
   z_alpha ~ normal(0, 1);

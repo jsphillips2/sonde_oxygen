@@ -21,12 +21,13 @@ init_fn = function(){
     alpha = runif(1, 1, 5),
     gamma_1 = runif(1, 1, 2),
     gamma_2 = runif(1, 1, 2),
-    sig_beta = runif(1, 0, 2),
-    sig_alpha = runif(1, 0, 2),
-    sig_rho = runif(1, 0, 2),
+    sig_beta = runif(1, 0, 1),
+    sig_alpha = runif(1, 0, 0.2),
+    sig_rho = runif(1, 0, 1),
     sig_proc = runif(1, 50, 150),
-    log_beta0 = runif(data$D, log(0.75) + 6, log(1.25) + 6),
-    log_rho = runif(data$D, log(0.75) + 6, log(1.25) + 6)
+    log_beta0 = runif(data$D, log(0.5) + 5.5, log(1.5) + 5.5),
+    log_alpha = runif(data$D, log(0.5) + 1, log(1.5) + 1),
+    log_rho = runif(data$D, log(0.5) + 5.5, log(1.5) + 5.5)
   )
 }
 

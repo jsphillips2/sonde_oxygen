@@ -139,7 +139,7 @@ sonde_prep3 %>%
 # sonde_prep2 %>%
 #   filter(year==yr) %>%
 #   left_join(sonde_prep3 %>% select(year, month, yday, hour, T_S, D_M)) %>%
-# write_csv("data/sonde_prep.csv")
+# write_csv("simulations/data_16/sonde_prep_16.csv")
 
 
 
@@ -176,6 +176,6 @@ dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
 # export as .R
 # stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
 #              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
-#              "sch_conv","z","sig_obs","k2"), file="data/sonde_list.R")
+#              "sch_conv","z","sig_obs","k2"), file="simulations/data_16/sonde_list_16.R")
 
 
