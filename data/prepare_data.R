@@ -7,7 +7,7 @@ library(tidyverse)
 library(rstan)
 
 # select years desired for analysis
-years = c(2013, 2015, 2016, 2017)
+years = c(2012, 2013, 2016, 2017)
 
 # read data
 sonde = read_csv("data/sonde_final.csv") %>% 
