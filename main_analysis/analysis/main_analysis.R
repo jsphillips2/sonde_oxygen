@@ -348,7 +348,7 @@ ggpairs(params_full %>% select(-step, -chain, -lp__))
 # values
 model_fit %>%
   filter(name %in% 
-           c("alpha","gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc")) %>%
+           c("gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc","k0","k1")) %>%
   select(-index, -day)
   
 
