@@ -19,3 +19,17 @@ sonde_data %>%
   geom_point(size=2)+
   geom_line(aes(y = nep), size=0.9)+
   theme_base
+
+
+params_full %>%
+  select(-lp__, -step) %>%
+  gather(variable, value, -chain) %>%
+  ggplot(aes(value, color=chain))+
+  facet_wrap(~variable, scales="free")+
+  geom_density()+
+  theme_base
+
+
+
+
+
