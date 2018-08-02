@@ -21,12 +21,14 @@ init_fn = function(){
     alpha = runif(1, 1, 5),
     gamma_1 = runif(1, 1, 2),
     gamma_2 = runif(1, 1, 2),
-    # sig_beta = runif(1, 0, 1),
-    # sig_alpha = runif(1, 0, 0.2),
-    # sig_rho = runif(1, 0, 1),
+    sig_beta = runif(1, 0, 1),
+    sig_alpha = runif(1, 0, 0.2),
+    sig_opt = runif(1, 0, 10),
+    sig_rho = runif(1, 0, 1),
     sig_proc = runif(1, 50, 150),
     log_beta0 = runif(data$D, log(0.5) + 5.5, log(1.5) + 5.5),
     log_alpha = runif(data$D, log(0.5) + 1, log(1.5) + 1),
+    log_opt = runif(data$D, log(0.5) + 6, log(1.5) + 6),
     log_rho = runif(data$D, log(0.5) + 5.5, log(1.5) + 5.5)
   )
 }
@@ -40,7 +42,7 @@ init_fn = function(){
 #==========
 
 # initial specifications
-model = "o2_model_indep"
+model = "o2_model_inhib_var"
 model_path = paste0("main_analysis/fit_model/",model,".stan")
 chains = 1
 iter = 1000
@@ -71,7 +73,7 @@ check_energy(fit)
 #==========
 
 # fixed parameters by step
-fixed_par_v = c("gamma_1","gamma_2","k0","k1","sig_proc","lp__")
+fixed_par_v = c("gamma_1","gamma_2","k0","k1","sig_proc","sig_beta0","sig_alpha","sig_opt","sig_rho", "lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
@@ -132,7 +134,7 @@ post_pred %>%
 #==========
 
 # beta0 and rho full
-daily_pars = c("beta0","alpha","rho")
+daily_pars = c("beta0","alpha","opt","rho")
 daily = rstan::extract(fit, pars=daily_pars) %>% 
 {lapply(1:3, function(x){y = .[[x]] %>% as_data_frame %>%
   mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains)) %>%
@@ -149,12 +151,12 @@ fit_clean = fit_summary %>%
   rename(lower16 = `16%`, middle = `50%`, upper84 = `84%`)  %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])),
-         day = ifelse(name %in% c("beta0","alpha","rho","GPP","ER","NEP","AIR","Flux"), index, data$D_M[index])) %>%
+         day = ifelse(name %in% c("beta0","alpha","opt","rho","GPP","ER","NEP","AIR","Flux"), index, data$D_M[index])) %>%
   select(name, index, day, middle, lower16, upper84) %>%
-  filter(!(name %in% c("log_beta0","log_rho","lp__")))
+  filter(!(name %in% c("log_beta0","log_rho","log_alpha","log_opt", "lp__")))
 
 # Export
-output_path = "main_analysis/model_output/independent"
+output_path = "main_analysis/model_output/inhibition_var"
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
 # write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
 # write_csv(daily, paste0(output_path,"/daily_full.csv"))
