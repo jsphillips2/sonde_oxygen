@@ -339,6 +339,68 @@ f7
 
 
 #==========
+#========== Figure 8: P-I Curves
+#==========
+
+# select days 
+# 6 days spanning 6 weeks in 2012
+dy = 7*c(1:6)
+
+# extract estimates for beta0 and rho
+beta_rho = model_fit %>%
+  filter(day %in% dy,
+         name %in% c("beta0","rho")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  spread(name, middle) %>%
+  mutate(beta0 = beta0/1000,
+         rho = rho/1000,
+         max = (beta0 - rho),
+         Day = paste("Day",yday))
+
+# calcualte observed DO flux for desired days
+# correct observed flux for estimated exchange with atmosphere
+# combine with esimtates of "nep" and "air"
+flux_d = sonde_data %>%
+  rename(day = D_M) %>%
+  filter(day  %in% dy) %>%
+  select(year, month, day, yday, hour, par, do) %>%
+  group_by(yday) %>%
+  left_join(model_fit %>%
+              filter(name %in% c("nep","air")) %>%
+              select(index, day, name, middle) %>%
+              spread(name, middle) %>%
+              select(-index) %>%
+              group_by(day) %>%
+              mutate(hour = 1:24)) %>%
+  mutate(do_flux = c(3.3*diff(do)/1000, NA),
+         air = air/1000,
+         nep = nep/1000,
+         flux_correct = do_flux - air) 
+
+# plot
+flux_d %>%
+  filter(flux_correct > -2) %>%
+  mutate(Day = paste("Day",yday)) %>%
+  ggplot(aes(par, flux_correct))+
+  facet_wrap(~Day)+
+  geom_hline(yintercept = 0, size= 0.2)+
+  geom_point(size = 2, alpha = 0.8)+
+  geom_line(aes(y = nep), size= 0.8)+
+  geom_hline(data = beta_rho, aes(yintercept = beta0), color="dodgerblue")+
+  geom_hline(data = beta_rho, aes(yintercept = -rho), color="firebrick")+
+  scale_y_continuous(expression(Corrected~DO~Flux~"("*g~O[2]~m^{-2}~day^{-1}*")"))+
+  scale_x_continuous(expression("PAR ("*mu*mol~photons~m^{-2}~s^{-1}*")"))+
+  theme_base
+
+
+
+
+
+
+
+#==========
 #========== Appendix: Fixed Parameters
 #==========
 
