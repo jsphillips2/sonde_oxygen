@@ -11,16 +11,6 @@ sonde_data = read_csv("data/sonde_prep.csv")
 params_full = read_csv("main_analysis/model_output/fixed_pars_full.csv")
 daily = read_csv("main_analysis/model_output/daily_full.csv")
 
-# base theme
-theme_base = theme_bw()+
-  theme(panel.grid=element_blank(),
-        strip.background=element_blank(),
-        text = element_text(size=12),
-        strip.text = element_text(size=10),
-        axis.text=element_text(size=10, color="black"),
-        axis.title.y=element_text(margin=margin(0,15,0,0)),
-        axis.title.x=element_text(margin=margin(15,0,0,0)))
-
 
 
 
@@ -187,7 +177,7 @@ gpp_part_sum = lapply(c(0.16,0.5,0.84), function(x){
 names(gpp_part_sum) = c("lower16","middle","upper84")
 
 # export
-# write_csv(gpp_part_sum %>% bind_rows, "analysis/tables/gpp_part.csv")
+# write_csv(gpp_part_sum %>% bind_rows, "main_analysis/analysis/tables/gpp_part.csv")
 
 
 
@@ -228,6 +218,6 @@ er_part_sum = lapply(c(0.16,0.5,0.84), function(x){
 names(er_part_sum) = c("lower16","middle","upper84")
 
 # export
-# write_csv(er_part_sum %>% bind_rows, "analysis/tables/er_part.csv")
+# write_csv(er_part_sum %>% bind_rows, "main_analysis/analysis/tables/er_part.csv")
 
 
