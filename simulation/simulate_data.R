@@ -4,6 +4,7 @@
 
 # load packages
 library(tidyverse)
+library(rstan)
 
 # import data and model fit
 sonde_data = read_csv("data/sonde_prep.csv")
@@ -68,11 +69,8 @@ data_prep = model_fit %>%
 #==========
 
 # define function to simulate
-sim_fn = function(x, beta_fixed = F, alpha_fixed = F, rho_fixed = F){
+sim_fn = function(x){
   x %>% 
-    mutate(beta0 = if(beta_fixed == T) mean(beta0, na.rm=T) else beta0,
-           alpha = if(alpha_fixed == T) mean(alpha, na.rm=T) else alpha,
-           rho = if(rho_fixed == T) mean(rho, na.rm=T) else rho) %>%
     {
     sim_o2 = c(.$o2[1], rep(NA, nrow(x) - 1))
     beta = rep(NA, nrow(x))
@@ -88,7 +86,8 @@ sim_fn = function(x, beta_fixed = F, alpha_fixed = F, rho_fixed = F){
       nep[t-1] = gpp[t-1] - er[t-1];
       air[t-1] = ((.$k0 + .$k1*.$wspeed[t-1]^.$k2)/100)*.$sch_conv[t-1]*(.$do_eq[t-1] - sim_o2[t-1]);
       o2_pred[t-1] = sim_o2[t-1] + (nep[t-1] + air[t-1])/.$z;
-      sim_o2[t] = o2_pred[t-1] + .$proc_err[t];
+      # sim_o2[t] = o2_pred[t-1] + .$proc_err[t];
+      sim_o2[t] = o2_pred[t-1] + rnorm(n = 1, mean = 0, sd = 80.5);
     }
     df = data_frame(T_S = .$T_S,
                     day = .$day,
@@ -109,30 +108,35 @@ data_sim = data_prep %>%
               rename(fixed_none = sim_o2)) %>%
   # beta0 fixed
   full_join(data_prep %>% 
+              mutate(beta0 = mean(beta0, na.rm=T)) %>%
               split(.$T_S) %>%
               lapply(function(x) 
-              {sim_fn(x, beta_fixed = T)}) %>%
+              {sim_fn(x)}) %>%
               bind_rows() %>%
               rename(fixed_beta = sim_o2)) %>%
   # alpha fixed
   full_join(data_prep %>% 
+              mutate(alpha = mean(alpha, na.rm=T)) %>%
               split(.$T_S) %>%
               lapply(function(x) 
-              {sim_fn(x, alpha_fixed = T)}) %>%
+              {sim_fn(x)}) %>%
               bind_rows() %>%
               rename(fixed_alpha = sim_o2)) %>%
   # rho fixed
   full_join(data_prep %>% 
+              mutate(rho = mean(rho, na.rm=T)) %>%
               split(.$T_S) %>%
               lapply(function(x) 
-              {sim_fn(x, rho_fixed = T)}) %>%
+              {sim_fn(x)}) %>%
               bind_rows() %>%
               rename(fixed_rho = sim_o2)) %>%
   # beta rho fixed
   full_join(data_prep %>% 
+              mutate(beta0 = mean(beta0, na.rm=T),
+                     rho = mean(rho, na.rm=T)) %>%
               split(.$T_S) %>%
               lapply(function(x) 
-              {sim_fn(x, beta_fixed = T, rho_fixed = T)}) %>%
+              {sim_fn(x)}) %>%
               bind_rows() %>%
               rename(fixed_beta_rho = sim_o2)) 
 
@@ -140,7 +144,7 @@ data_sim = data_prep %>%
 plot(o2 ~ fixed_none, data_sim)
 
 # plot
-days = 35:38
+days = 31:34
 data_sim %>%
   filter(day %in% days) %>%
   select(day, hour, fixed_none, fixed_beta, fixed_rho, fixed_beta_rho) %>%
