@@ -12,9 +12,13 @@ source("main_analysis/fit_model/stan_utility.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-1)
 
+# simulation type and rep (seed)
+type = "fixed_none"
+rep = 5
+
 # read data
-import_file = "fixed_beta_rho"
-data = read_rdump(paste0("simulation/simulated_data/",export_file,"/data_list.R"))
+import_file = paste0(type,"/rep_",rep)
+data = read_rdump(paste0("simulation/simulated_data/",import_file,"/data_list.R"))
 
 # function for initial values
 init_fn = function(){
