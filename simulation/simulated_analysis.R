@@ -46,7 +46,7 @@ resp_d = model_fit %>%
 resp_d %>%
   ggplot(aes(day, middle, color=name))+
   facet_wrap(~year, labeller=label_parsed)+
-  geom_hline(yintercept = 0.3, alpha=0.5, size=0.2)+
+  # geom_hline(yintercept = 0.3, alpha=0.5, size=0.2)+
   geom_ribbon(aes(ymin=lower16, ymax=upper84, fill=name),
               linetype=0, alpha=0.35)+
   geom_line(size=0.6)+
@@ -54,8 +54,8 @@ resp_d %>%
                      labels = c(expression(beta^0), expression(rho)))+
   scale_fill_manual("",values=c("dodgerblue","firebrick"), 
                     labels = c(expression(beta^0), expression(rho)))+
-  scale_y_continuous(expression("Metabolism Parameter (g "*O[2]~m^{-2}~h^{-1}*")"),
-                     breaks=c(0.15,0.3,0.45))+
+  # scale_y_continuous(expression("Metabolism Parameter (g "*O[2]~m^{-2}~h^{-1}*")"),
+  #                    breaks=c(0.15,0.3,0.45))+
   # scale_x_continuous("Day of Year", 
   #                    limits=c(150,240), breaks=c(165,195,225))+
   theme_base+
