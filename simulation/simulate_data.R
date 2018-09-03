@@ -12,6 +12,17 @@ model_fit = read_csv("main_analysis/model_output/summary_clean.csv")
 # selects years
 years = c(2012)
 
+# base theme
+theme_base = theme_bw()+
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        legend.margin = margin(0,0,0,0),
+        text = element_text(size=12),
+        strip.text = element_text(size=10),
+        legend.text = element_text(size=10),
+        axis.text=element_text(size=10, color="black"),
+        axis.title.y=element_text(margin=margin(0,15,0,0)),
+        axis.title.x=element_text(margin=margin(15,0,0,0)))
 
 
 
@@ -20,7 +31,7 @@ years = c(2012)
 #========== Prepare data for simulation
 #==========
 
-test = model_fit %>%
+data_prep = model_fit %>%
   filter(name %in% c("o2_pred","o2")) %>%
   select(-lower16, -upper84) %>%
   spread(name, middle) %>%
@@ -46,7 +57,8 @@ test = model_fit %>%
          k2 = 1.7,
          sig_obs = 10,
          temp_ref = 12,
-         z = 3.3)
+         z = 3.3) %>%
+  ungroup()
 
 
 
@@ -55,37 +67,204 @@ test = model_fit %>%
 #========== Simulate data
 #==========
 
-test2 = test %>%
-  split(.$T_S) %>%
-  lapply(function(x){
-    x %>% {
-      sim_o2 = c(.$o2[1], rep(NA, nrow(x) - 1))
-      beta = rep(NA, nrow(x))
-      gpp = rep(NA, nrow(x))
-      er = rep(NA, nrow(x))
-      nep = rep(NA, nrow(x))
-      air = rep(NA, nrow(x))
-      o2_pred = rep(NA, nrow(x))
-      for(t in 2:nrow(.)){
-        beta[t-1] = .$beta0[t-1]*.$gamma_1^(.$temp[t-1] - .$temp_ref);
-        gpp[t-1] = beta[t-1]*tanh((.$alpha[t-1]/beta[t-1])*.$par[t-1]);
-        er[t-1] = .$rho[t-1]*.$gamma_2^(.$temp[t-1] - .$temp_ref);
-        nep[t-1] = gpp[t-1] - er[t-1];
-        air[t-1] = ((.$k0 + .$k1*.$wspeed[t-1]^.$k2)/100)*.$sch_conv[t-1]*(.$do_eq[t-1] - sim_o2[t-1]);
-        o2_pred[t-1] = sim_o2[t-1] + (nep[t-1] + air[t-1])/.$z;
-        sim_o2[t] = o2_pred[t-1] + .$proc_err[t];
-      }
-      df = data_frame(T_S = .$T_S,
-                      day = .$day,
-                      hour = .$hour,
-                      sim_o2 = sim_o2)
-      return(df)
+# define function to simulate
+sim_fn = function(x, beta_fixed = F, alpha_fixed = F, rho_fixed = F){
+  x %>% 
+    mutate(beta0 = if(beta_fixed == T) mean(beta0, na.rm=T) else beta0,
+           alpha = if(alpha_fixed == T) mean(alpha, na.rm=T) else alpha,
+           rho = if(rho_fixed == T) mean(rho, na.rm=T) else rho) %>%
+    {
+    sim_o2 = c(.$o2[1], rep(NA, nrow(x) - 1))
+    beta = rep(NA, nrow(x))
+    gpp = rep(NA, nrow(x))
+    er = rep(NA, nrow(x))
+    nep = rep(NA, nrow(x))
+    air = rep(NA, nrow(x))
+    o2_pred = rep(NA, nrow(x))
+    for(t in 2:nrow(.)){
+      beta[t-1] = .$beta0[t-1]*.$gamma_1^(.$temp[t-1] - .$temp_ref);
+      gpp[t-1] = beta[t-1]*tanh((.$alpha[t-1]/beta[t-1])*.$par[t-1]);
+      er[t-1] = .$rho[t-1]*.$gamma_2^(.$temp[t-1] - .$temp_ref);
+      nep[t-1] = gpp[t-1] - er[t-1];
+      air[t-1] = ((.$k0 + .$k1*.$wspeed[t-1]^.$k2)/100)*.$sch_conv[t-1]*(.$do_eq[t-1] - sim_o2[t-1]);
+      o2_pred[t-1] = sim_o2[t-1] + (nep[t-1] + air[t-1])/.$z;
+      sim_o2[t] = o2_pred[t-1] + .$proc_err[t];
     }
-  })
+    df = data_frame(T_S = .$T_S,
+                    day = .$day,
+                    hour = .$hour,
+                    sim_o2 = sim_o2)
+    return(df)
+  }
+}
 
-# add simulated data to real data
-test3 = test %>% 
-  left_join(test2 %>% bind_rows())
+# simulate data and combine
+data_sim = data_prep %>%
+  # none fixed
+  full_join(data_prep %>% 
+              split(.$T_S) %>%
+              lapply(function(x) 
+              {sim_fn(x)}) %>%
+              bind_rows() %>%
+              rename(fixed_none = sim_o2)) %>%
+  # beta0 fixed
+  full_join(data_prep %>% 
+              split(.$T_S) %>%
+              lapply(function(x) 
+              {sim_fn(x, beta_fixed = T)}) %>%
+              bind_rows() %>%
+              rename(fixed_beta = sim_o2)) %>%
+  # alpha fixed
+  full_join(data_prep %>% 
+              split(.$T_S) %>%
+              lapply(function(x) 
+              {sim_fn(x, alpha_fixed = T)}) %>%
+              bind_rows() %>%
+              rename(fixed_alpha = sim_o2)) %>%
+  # rho fixed
+  full_join(data_prep %>% 
+              split(.$T_S) %>%
+              lapply(function(x) 
+              {sim_fn(x, rho_fixed = T)}) %>%
+              bind_rows() %>%
+              rename(fixed_rho = sim_o2)) %>%
+  # beta rho fixed
+  full_join(data_prep %>% 
+              split(.$T_S) %>%
+              lapply(function(x) 
+              {sim_fn(x, beta_fixed = T, rho_fixed = T)}) %>%
+              bind_rows() %>%
+              rename(fixed_beta_rho = sim_o2)) 
+
+# check the none fixed matches original inferred o2
+plot(o2 ~ fixed_none, data_sim)
 
 # plot
+days = 35:38
+data_sim %>%
+  filter(day %in% days) %>%
+  select(day, hour, fixed_none, fixed_beta, fixed_rho, fixed_beta_rho) %>%
+  gather(var, value, fixed_none, fixed_beta, fixed_rho, fixed_beta_rho) %>%
+  mutate(var = factor(var,
+    levels=c("fixed_none", "fixed_beta", "fixed_rho", "fixed_beta_rho"))) %>%
+  ggplot(aes(hour, value/1000))+
+  facet_wrap(~day)+
+  geom_line(aes(color = var), alpha=0.9, size = 0.7)+
+  geom_point(data = data_sim %>% 
+               filter(day %in% days), aes(hour, do/1000),
+             alpha = 0.6)+
+  scale_color_manual("Fixed Parameters",values=c("gray30","firebrick","dodgerblue","purple3"),
+                     labels=c(~"none",
+                              ~beta,
+                              ~rho,
+                              ~beta~"&"~rho))+
+  scale_y_continuous(expression("Dissovled"~O[2]~"("*mg~L^{-1}*")"))+
+  scale_x_continuous("Hour", breaks=c(6,12,18))+
+  theme_base
+
+
+
+
+
+
+#==========
+#========== Export Data
+#==========
+
+# select vars to export
+data_exp = data_sim %>% 
+  select(year, month, yday, hour, par, wspeed, temp, do_eq, sch_conv, fixed_beta_rho) %>%
+  rename(do = fixed_beta_rho)
+
+# calculate variable T_S to map observations to time series
+# calculate variable D_M to map observations to days
+# omit NA's 
+# replace 0 PAR with minimum non-0 PAR
+# convert to data frame
+data_exp2 = data_exp %>%
+  arrange(year, yday, hour) %>%
+  group_by(year) %>%
+  mutate(j = ifelse(is.na(do)==T, 1, 0), 
+         k = c(1,abs(diff(j)))) %>% 
+  filter(is.na(do)==F) %>%
+  mutate(T_S = cumsum(k)) %>%
+  ungroup() %>%
+  mutate(yearT_S = paste(year, T_S),
+         T_S = as.numeric(as.factor(yearT_S)),
+         year_day = paste(year, yday),
+         D_M = as.numeric(as.factor(year_day)),
+         par = ifelse(par==0, min(par[which(par>0)]), par)) %>%
+  select(-j, -k ,-yearT_S, -year_day) %>%
+  as.data.frame()
+
+# check T_S
+data_exp %>% 
+  expand(year,month,yday,hour) %>%
+  full_join(data_exp2) %>%
+  arrange(year,yday) %>%
+  mutate(time = yday + hour/24) %>%
+  ggplot(aes(time, do, color=factor(T_S)))+
+  geom_line()+
+  theme_bw()
+
+# check D_M
+data_exp %>% 
+  expand(year,month,yday,hour) %>%
+  full_join(data_exp2) %>%
+  arrange(year,yday) %>%
+  mutate(time = yday + hour/24) %>%
+  filter(D_M %in% (10 + c(1:10))) %>%
+  ggplot(aes(time, do, color=factor(D_M)))+
+  geom_line()+
+  theme_bw()
+
+# check D_M day extraction
+data_exp2 %>% 
+  ungroup() %>%
+  filter(D_M == data_exp2$D_M[1000])
+
+# export prepared data
+export_file = "fixed_beta_rho"
+# data_exp %>%
+#   left_join(data_exp2 %>% select(year, month, yday, hour, T_S, D_M)) %>%
+# write_csv(paste0("simulation/simulated_data/",export_file,"/data_export.csv"))
+
+
+
+
+
+#==========
+#========== Package data 
+#==========
+
+# define variables in evnironment 
+# add noise to o2
+sig_obs = 10
+o2_obs = data_exp2$do + rnorm(data_exp2$do , mean = 0, sd = sig_obs)
+o2_eq = data_exp2$do_eq
+light = data_exp2$par
+temp = data_exp2$temp
+wspeed = data_exp2$wspeed
+sch_conv = data_exp2$sch_conv
+D_M = data_exp2$D_M
+S = c({data_exp2 %>%
+    group_by(T_S) %>%
+    summarize(value = length(T_S))}$value,1) 
+K = c({data_exp2 %>%
+    group_by(year) %>%
+    summarize(value = length(unique(D_M)))}$value,1)
+temp_ref = 11.99139
+z = 3.3
+k2 = 1.7
+N = length(o2_obs)
+T_S = length(S)-1 
+D = sum(K)-1
+Y = length(K)-1
+o2_st = c(1, if(T_S < 2) 1 else c(cumsum((S)[1:(T_S-1)]) + 1, 1))
+dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
+
+# export as .R
+# stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
+#              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
+#              "sch_conv","z","sig_obs","k2"), file=paste0("simulation/simulated_data/",export_file,"/data_list.R"))
 
