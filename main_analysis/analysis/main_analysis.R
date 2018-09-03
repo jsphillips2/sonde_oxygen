@@ -390,7 +390,8 @@ flux_d %>%
   geom_line(aes(y = nep), size= 0.8)+
   geom_hline(data = beta_rho, aes(yintercept = beta0), color="dodgerblue")+
   geom_hline(data = beta_rho, aes(yintercept = -rho), color="firebrick")+
-  scale_y_continuous(expression(Corrected~DO~Flux~"("*g~O[2]~m^{-2}~day^{-1}*")"))+
+  scale_y_continuous(expression(Corrected~DO~Flux~"("*g~O[2]~m^{-2}~day^{-1}*")"),
+                     limits=c(-1,1))+
   scale_x_continuous(expression("PAR ("*mu*mol~photons~m^{-2}~s^{-1}*")"))+
   theme_base
 
