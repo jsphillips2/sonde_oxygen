@@ -86,14 +86,14 @@ model {
   gamma_2 ~ normal(1.1, 0.4) T[1, ]; 
   k0 ~ normal(2, 2) T[0, ]; 
   k1 ~ normal(0.2, 0.2) T[0, ]; 
-  sig_beta0 ~ normal(0.5, 0.6) T[0, ]; 
-  sig_alpha ~ normal(0.1, 0.1) T[0, ]; 
-  sig_rho ~ normal(0.5, 0.6) T[0, ]; 
+  sig_beta0 ~ normal(0.01, 0.1) T[0, ]; 
+  sig_alpha ~ normal(0.001, 0.01) T[0, ]; 
+  sig_rho ~ normal(0.01, 0.1) T[0, ]; 
   sig_proc ~ normal(100, 100) T[0, ]; 
   // initial values
-  log_beta0_init ~ normal(5.5, 0.6); 
-  log_alpha_init ~ normal(1, 0.1); 
-  log_rho_init ~ normal(5.5, 0.6); 
+  log_beta0_init ~ normal(5.5, 5.5); 
+  log_alpha_init ~ normal(1, 1); 
+  log_rho_init ~ normal(5.5, 5.5); 
   // z values for non-centered parameterization
   z_beta0 ~ normal(0, 1);
   z_alpha ~ normal(0, 1);
