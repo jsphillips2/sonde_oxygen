@@ -96,8 +96,8 @@ sim_fn = function(x){
 #==========
 
 # set simulation type and seed
-type = "fixed_all"
-seed = 1
+type = "fixed_none"
+seed = 5
 
 # simulate data 
 set.seed(seed)
@@ -191,9 +191,9 @@ data_exp2 %>%
 
 # export prepared data
 export_file = paste0(type,"/rep_",seed)
-# data_exp %>%
-#   left_join(data_exp2 %>% select(year, month, yday, hour, T_S, D_M)) %>%
-# write_csv(paste0("simulation/simulated_data/",export_file,"/data_export.csv"))
+data_exp %>%
+  left_join(data_exp2 %>% select(year, month, yday, hour, T_S, D_M)) %>%
+write_csv(paste0("simulation/simulated_data/",export_file,"/data_export.csv"))
 
 
 
@@ -230,7 +230,7 @@ o2_st = c(1, if(T_S < 2) 1 else c(cumsum((S)[1:(T_S-1)]) + 1, 1))
 dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
 
 # export as .R
-# stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
-#              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
-#              "sch_conv","z","sig_obs","k2"), file=paste0("simulation/simulated_data/",export_file,"/data_list.R"))
+stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
+             "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
+             "sch_conv","z","sig_obs","k2"), file=paste0("simulation/simulated_data/",export_file,"/data_list.R"))
 
