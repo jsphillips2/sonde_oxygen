@@ -5,12 +5,37 @@
 # load packages
 library(tidyverse)
 
-# import data and model fit
-import_file = "fixed_beta_rho"
-sonde_data = read_csv(paste0("simulation/simulated_data/",import_file,"/data_export.csv"))
-params_full = read_csv(paste0(output_path,import_file,"/post_pred_full.csv"))
-post_pred = read_csv(paste0(output_path,import_file,"/daily_full.csv"))
-model_fit = read_csv(paste0(output_path,import_file,"/summary_clean.csv"))
+# import specifications
+type = c("fixed_all","fixed_none")
+rep = paste0("rep_",c(1:5))
+
+# import data
+# observed
+sonde_data = read_csv("data/sonde_prep.csv")
+
+# simulated data
+sim_data = type %>%
+  lapply(function(x){
+    rep %>%
+      lapply(function(y){
+        read_csv(paste0("simulation/simulated_data/",x,"/",y,"/data_export.csv")) %>%
+          mutate(type = x,
+                 rep = y)
+      }) %>% bind_rows()
+  }) %>%
+  bind_rows() 
+
+# model fit
+model_fit = type %>%
+  lapply(function(x){
+    rep %>%
+      lapply(function(y){
+        read_csv(paste0("simulation/simulated_output/",x,"/",y,"/summary_clean.csv")) %>%
+          mutate(type = x,
+                 rep = y)
+      }) %>% bind_rows()
+  }) %>%
+  bind_rows() 
 
 # base theme
 theme_base = theme_bw()+
@@ -26,39 +51,65 @@ theme_base = theme_bw()+
 
 
 
-
 #==========
-#========== Figure 5: beta and rho
+#========== Plot
 #==========
 
-# prep data
-resp_d = model_fit %>%
-  filter(name %in% c("beta0","rho")) %>%
+sim_mean = sim_data %>%
+  na.omit() %>%
+  group_by(type, year, yday) %>%
+  summarize(beta0 = mean(beta0),
+            alpha = mean(alpha),
+            rho = mean(rho)) 
+
+# beta0
+model_fit %>%
+  filter(name %in% c("beta0")) %>%
   left_join(sonde_data %>%
               group_by(year, yday) %>%
               summarize(day = unique(D_M))) %>%
   mutate(middle = middle/1000,
          lower16 = lower16/1000,
          upper84 = upper84/1000) %>%
-  arrange(year,yday)
+  arrange(type, rep, year,yday) %>%
+  ggplot(aes(yday, middle))+
+  facet_wrap(~type)+
+  geom_line(aes(group = rep), alpha = 0.5)+
+  geom_line(data = sim_mean, aes(x = yday, y = beta0/1000), size = 0.7)+
+  theme_base
 
-# plots
-resp_d %>%
-  ggplot(aes(day, middle, color=name))+
-  facet_wrap(~year, labeller=label_parsed)+
-  # geom_hline(yintercept = 0.3, alpha=0.5, size=0.2)+
-  geom_ribbon(aes(ymin=lower16, ymax=upper84, fill=name),
-              linetype=0, alpha=0.35)+
-  geom_line(size=0.6)+
-  scale_color_manual("",values=c("dodgerblue","firebrick"), 
-                     labels = c(expression(beta^0), expression(rho)))+
-  scale_fill_manual("",values=c("dodgerblue","firebrick"), 
-                    labels = c(expression(beta^0), expression(rho)))+
-  # scale_y_continuous(expression("Metabolism Parameter (g "*O[2]~m^{-2}~h^{-1}*")"),
-  #                    breaks=c(0.15,0.3,0.45))+
-  # scale_x_continuous("Day of Year", 
-  #                    limits=c(150,240), breaks=c(165,195,225))+
-  theme_base+
-  theme(legend.text.align = 0,
-        legend.position = c(0.9,0.9))
+# alpha
+model_fit %>%
+  filter(name %in% c("alpha")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  mutate(middle = middle/1000,
+         lower16 = lower16/1000,
+         upper84 = upper84/1000) %>%
+  arrange(type, rep, year,yday) %>%
+  ggplot(aes(yday, middle))+
+  facet_wrap(~type)+
+  geom_line(aes(group = rep), alpha = 0.5)+
+  geom_line(data = sim_mean, aes(x = yday, y = alpha/1000), size = 0.7)+
+  theme_base
+
+# rho
+model_fit %>%
+  filter(name %in% c("rho")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  mutate(middle = middle/1000,
+         lower16 = lower16/1000,
+         upper84 = upper84/1000) %>%
+  arrange(type, rep, year,yday) %>%
+  ggplot(aes(yday, middle))+
+  facet_wrap(~type)+
+  geom_line(aes(group = rep), alpha = 0.5)+
+  geom_line(data = sim_mean, aes(x = yday, y = rho/1000), size = 0.7)+
+  theme_base
+
+
+
 
