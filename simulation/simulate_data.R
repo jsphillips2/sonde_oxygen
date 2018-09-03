@@ -29,9 +29,10 @@ theme_base = theme_bw()+
 
 
 #==========
-#========== Prepare data for simulation
+#========== Prepare for simulation
 #==========
 
+# prepare data
 data_prep = model_fit %>%
   filter(name %in% c("o2_pred","o2")) %>%
   select(-lower16, -upper84) %>%
@@ -61,17 +62,10 @@ data_prep = model_fit %>%
          z = 3.3) %>%
   ungroup()
 
-
-
-
-#==========
-#========== Simulate data
-#==========
-
 # define function to simulate
 sim_fn = function(x){
   x %>% 
-    {
+  {
     sim_o2 = c(.$o2[1], rep(NA, nrow(x) - 1))
     beta = rep(NA, nrow(x))
     gpp = rep(NA, nrow(x))
@@ -86,8 +80,7 @@ sim_fn = function(x){
       nep[t-1] = gpp[t-1] - er[t-1];
       air[t-1] = ((.$k0 + .$k1*.$wspeed[t-1]^.$k2)/100)*.$sch_conv[t-1]*(.$do_eq[t-1] - sim_o2[t-1]);
       o2_pred[t-1] = sim_o2[t-1] + (nep[t-1] + air[t-1])/.$z;
-      # sim_o2[t] = o2_pred[t-1] + .$proc_err[t];
-      sim_o2[t] = o2_pred[t-1] + rnorm(n = 1, mean = 0, sd = 80.5);
+      sim_o2[t] = o2_pred[t-1] + .$proc_err[t];
     }
     df = data_frame(T_S = .$T_S,
                     day = .$day,
@@ -97,75 +90,44 @@ sim_fn = function(x){
   }
 }
 
-# simulate data and combine
+
+#==========
+#========== Simulate data
+#==========
+
+# set simulation type and seed
+type = "fixed_all"
+seed = 1
+
+# simulate data 
+set.seed(seed)
 data_sim = data_prep %>%
-  # none fixed
   full_join(data_prep %>% 
+              mutate(
+                # comment out lines to change fixed values of simulation
+                # beta0 = mean(beta0, na.rm=T),
+                # alpha = mean(alpha, na.rm=T),
+                # rho = mean(rho, na.rm=T),
+                # generate process errors (sample from 'real')
+                proc_err = sample(na.omit(proc_err), 
+                                  size = length(proc_err),
+                                  replace = T)
+                ) %>%
               split(.$T_S) %>%
               lapply(function(x) 
               {sim_fn(x)}) %>%
-              bind_rows() %>%
-              rename(fixed_none = sim_o2)) %>%
-  # beta0 fixed
-  full_join(data_prep %>% 
-              mutate(beta0 = mean(beta0, na.rm=T)) %>%
-              split(.$T_S) %>%
-              lapply(function(x) 
-              {sim_fn(x)}) %>%
-              bind_rows() %>%
-              rename(fixed_beta = sim_o2)) %>%
-  # alpha fixed
-  full_join(data_prep %>% 
-              mutate(alpha = mean(alpha, na.rm=T)) %>%
-              split(.$T_S) %>%
-              lapply(function(x) 
-              {sim_fn(x)}) %>%
-              bind_rows() %>%
-              rename(fixed_alpha = sim_o2)) %>%
-  # rho fixed
-  full_join(data_prep %>% 
-              mutate(rho = mean(rho, na.rm=T)) %>%
-              split(.$T_S) %>%
-              lapply(function(x) 
-              {sim_fn(x)}) %>%
-              bind_rows() %>%
-              rename(fixed_rho = sim_o2)) %>%
-  # beta rho fixed
-  full_join(data_prep %>% 
-              mutate(beta0 = mean(beta0, na.rm=T),
-                     rho = mean(rho, na.rm=T)) %>%
-              split(.$T_S) %>%
-              lapply(function(x) 
-              {sim_fn(x)}) %>%
-              bind_rows() %>%
-              rename(fixed_beta_rho = sim_o2)) 
+              bind_rows()) %>%
+  mutate(type = type, seed = seed)
 
-# check the none fixed matches original inferred o2
-plot(o2 ~ fixed_none, data_sim)
-
-# plot
-days = 31:34
+# plot and compare to originally predicted
 data_sim %>%
-  filter(day %in% days) %>%
-  select(day, hour, fixed_none, fixed_beta, fixed_rho, fixed_beta_rho) %>%
-  gather(var, value, fixed_none, fixed_beta, fixed_rho, fixed_beta_rho) %>%
-  mutate(var = factor(var,
-    levels=c("fixed_none", "fixed_beta", "fixed_rho", "fixed_beta_rho"))) %>%
-  ggplot(aes(hour, value/1000))+
-  facet_wrap(~day)+
-  geom_line(aes(color = var), alpha=0.9, size = 0.7)+
-  geom_point(data = data_sim %>% 
-               filter(day %in% days), aes(hour, do/1000),
-             alpha = 0.6)+
-  scale_color_manual("Fixed Parameters",values=c("gray30","firebrick","dodgerblue","purple3"),
-                     labels=c(~"none",
-                              ~beta,
-                              ~rho,
-                              ~beta~"&"~rho))+
-  scale_y_continuous(expression("Dissovled"~O[2]~"("*mg~L^{-1}*")"))+
-  scale_x_continuous("Hour", breaks=c(6,12,18))+
+  mutate(time = yday + hour/24) %>%
+  select(time, o2_pred, sim_o2) %>%
+  gather(var, value, o2_pred, sim_o2) %>%
+  ggplot(aes(time, value/1000, color = var))+
+  geom_line(alpha = 0.7, size = 0.7)+
+  scale_color_manual(values=c("firebrick","dodgerblue"))+
   theme_base
-
 
 
 
@@ -177,8 +139,8 @@ data_sim %>%
 
 # select vars to export
 data_exp = data_sim %>% 
-  select(year, month, yday, hour, par, wspeed, temp, do_eq, sch_conv, fixed_beta_rho) %>%
-  rename(do = fixed_beta_rho)
+  select(type, seed, year, month, yday, hour, par, wspeed, temp, do_eq, sch_conv, sim_o2) %>%
+  rename(do = sim_o2)
 
 # calculate variable T_S to map observations to time series
 # calculate variable D_M to map observations to days
@@ -228,7 +190,7 @@ data_exp2 %>%
   filter(D_M == data_exp2$D_M[1000])
 
 # export prepared data
-export_file = "fixed_beta_rho"
+export_file = paste0(type,"/rep_",seed)
 # data_exp %>%
 #   left_join(data_exp2 %>% select(year, month, yday, hour, T_S, D_M)) %>%
 # write_csv(paste0("simulation/simulated_data/",export_file,"/data_export.csv"))
