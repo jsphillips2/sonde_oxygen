@@ -164,7 +164,7 @@ N = length(o2_obs)
 T_S = length(S)-1 
 D = sum(K)-1
 Y = length(K)-1
-o2_st = c(1, if(Y < 2) 1 else c(cumsum((S)[1:(T_S-1)]) + 1, 1))
+o2_st = c(1, if(T_S < 2) 1 else c(cumsum((S)[1:(T_S-1)]) + 1, 1))
 dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
 
 # export as .R
