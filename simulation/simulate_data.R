@@ -96,23 +96,24 @@ sim_fn = function(x){
 #==========
 
 # set simulation type and seed
-type = "fixed_none"
+type = "fixed_all"
 seed = 5
 
 # simulate data 
 set.seed(seed)
-data_sim = data_prep %>%
-  full_join(data_prep %>% 
-              mutate(
-                # comment out lines to change fixed values of simulation
-                # beta0 = mean(beta0, na.rm=T),
-                # alpha = mean(alpha, na.rm=T),
-                # rho = mean(rho, na.rm=T),
-                # generate process errors (sample from 'real')
-                proc_err = sample(na.omit(proc_err), 
-                                  size = length(proc_err),
-                                  replace = T)
-                ) %>%
+data_prep2 = data_prep %>% 
+  mutate(
+    # comment out lines to change fixed values of simulation
+    beta0 = mean(beta0, na.rm=T),
+    alpha = mean(alpha, na.rm=T),
+    rho = mean(rho, na.rm=T),
+    # generate process errors (sample from 'real')
+    proc_err = sample(na.omit(proc_err), 
+                      size = length(proc_err),
+                      replace = T)
+  )
+data_sim = data_prep2 %>%
+  full_join(data_prep2  %>%
               split(.$T_S) %>%
               lapply(function(x) 
               {sim_fn(x)}) %>%
@@ -139,7 +140,7 @@ data_sim %>%
 
 # select vars to export
 data_exp = data_sim %>% 
-  select(type, seed, year, month, yday, hour, par, wspeed, temp, do_eq, sch_conv, sim_o2) %>%
+  select(-do) %>%
   rename(do = sim_o2)
 
 # calculate variable T_S to map observations to time series
@@ -230,7 +231,7 @@ o2_st = c(1, if(T_S < 2) 1 else c(cumsum((S)[1:(T_S-1)]) + 1, 1))
 dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
 
 # export as .R
-stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
-             "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
-             "sch_conv","z","sig_obs","k2"), file=paste0("simulation/simulated_data/",export_file,"/data_list.R"))
+# stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
+#              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
+#              "sch_conv","z","sig_obs","k2"), file=paste0("simulation/simulated_data/",export_file,"/data_list.R"))
 
