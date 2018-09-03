@@ -19,16 +19,19 @@ data = read_rdump(paste0("simulation/simulated_data/",export_file,"/data_list.R"
 # function for initial values
 init_fn = function(){
   list(
-    alpha = runif(1, 1, 5),
-    gamma_1 = runif(1, 1, 2),
-    gamma_2 = runif(1, 1, 2),
-    sig_beta = runif(1, 0, 1),
-    sig_alpha = runif(1, 0, 0.2),
-    sig_rho = runif(1, 0, 1),
-    sig_proc = runif(1, 50, 150),
-    log_beta0 = runif(data$D, log(0.5) + 5.5, log(1.5) + 5.5),
-    log_alpha = runif(data$D, log(0.5) + 1, log(1.5) + 1),
-    log_rho = runif(data$D, log(0.5) + 5.5, log(1.5) + 5.5)
+    alpha = runif(n = 1, min = 1, max = 5),
+    gamma_1 = runif(n = 1, min = 1, max = 2),
+    gamma_2 = runif(n = 1, min = 1, max = 2),
+    sig_beta = runif(n = 1, min = 0, max = 0.1),
+    sig_alpha = runif(n = 1, min = 0, max = 0.01),
+    sig_rho = runif(n = 1, min = 0, max = 0.1),
+    sig_proc = runif(n = 1, min = 50, max = 150),
+    log_beta0_init = runif(n = data$Y + 1, min = log(0.1) + 5.5, 
+                           max = log(1.9) + 5.5),
+    log_alpha_init = runif(n = data$Y + 1, min = log(0.1) + 1, 
+                           max = log(1.9) + 1),
+    log_rho_init = runif(n = data$Y + 1, min = log(0.1) + 5.5, 
+                         max = log(1.9) + 5.5)
   )
 }
 
