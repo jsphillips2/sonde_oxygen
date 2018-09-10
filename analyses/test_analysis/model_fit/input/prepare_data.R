@@ -62,7 +62,7 @@ sonde_prep %>%
 # omit NA's 
 # replace 0 PAR with minimum non-0 PAR
 # convert to data frame
-sonde_prep3 = sonde_prep2 %>%
+sonde_prep3 = sonde_prep %>%
   group_by(year) %>%
   mutate(j = ifelse(is.na(do)==T, 1, 0), 
          k = c(1,abs(diff(j)))) %>% 
@@ -78,7 +78,7 @@ sonde_prep3 = sonde_prep2 %>%
   as.data.frame()
 
 # check T_S
-sonde_prep2 %>% 
+sonde_prep %>% 
   expand(year,month,yday,hour) %>%
   full_join(sonde_prep3) %>%
   arrange(year,yday) %>%
@@ -89,7 +89,7 @@ sonde_prep2 %>%
   theme_bw()
 
 # check D_M
-sonde_prep2 %>% 
+sonde_prep %>% 
   expand(year,month,yday,hour) %>%
   full_join(sonde_prep3) %>%
   arrange(year,yday) %>%
@@ -106,7 +106,7 @@ sonde_prep3 %>%
   filter(D_M == sonde_prep3$D_M[1000])
 
 # export prepared data
-# sonde_prep2 %>%
+# sonde_prep %>%
 #   left_join(sonde_prep3 %>% select(year, month, yday, hour, T_S, D_M)) %>%
 #   write_csv("analyses/test_analysis/model_fit/input/sonde_prep.csv")
 
@@ -134,7 +134,6 @@ K = c({sonde_prep3 %>%
     summarize(value = length(unique(D_M)))}$value,1)
 temp_ref = 11.99139
 z = 3.3
-sig_obs = 10
 k2 = 1.7
 N = length(o2_obs)
 T_S = length(S)-1 
@@ -146,7 +145,7 @@ dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
 # export as .R
 # stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
 #              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
-#              "sch_conv","z","sig_obs","k2"), 
+#              "sch_conv","z","k2"),
 #            file="analyses/test_analysis/model_fit/input/sonde_list.R")
 
 
