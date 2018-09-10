@@ -4,14 +4,13 @@
 
 # load packages
 library(tidyverse)
+library(GGally)
 library(truncnorm)
 
 # import data and model fit
 input_dir = "analyses/test_analysis/model_fit/"
-sonde_data = read_csv(paste0(input_dir,"input/sonde_prep.csv"))
 priors = read_csv(paste0(input_dir,"input/priors.csv"))
 params_full = read_csv(paste0(input_dir,"output/fixed_pars_full.csv"))
-post_pred = read_csv(paste0(input_dir,"output/post_pred_full.csv"))
 model_fit = read_csv(paste0(input_dir,"output/summary_clean.csv"))
 
 # base theme
@@ -31,55 +30,41 @@ theme_base = theme_bw()+
 
 
 #==========
-#========== Figure 1: Posterior predictive check
+#========== Chains
 #==========
 
-
-
-
-
-#==========
-#========== Figure 2: Net daily fluxes
-#==========
-
-f2 = model_fit %>%
-  filter(name=="Flux") %>%
-  left_join(sonde_data %>%
-              group_by(year, yday) %>%
-              arrange(year,yday,hour) %>%
-              mutate(d_do = c(NA,diff(do))) %>%
-              summarize(day = unique(D_M),
-                        d_do = 24*mean(d_do,na.rm=T))) %>%
-  full_join(sonde_data %>% expand(year,yday)) %>%
-  select(year,yday,middle,d_do) %>%
-  gather(var, value, c(middle,d_do)) %>%
-  mutate(var = ifelse(var=="middle","NEP + AIR","Observed"),
-         var = factor(var, levels=c("Observed","NEP + AIR")),
-         value = 3.3*value/1000) %>%
-  ggplot(aes(yday, value, color=var, size=var))+
-  facet_wrap(~year)+
-  geom_hline(yintercept = 0, alpha=0.5, size=0.5)+
-  geom_line()+
-  scale_color_manual("",values=c("gray50","black"))+
-  scale_size_manual("",values=c(0.5,0.7))+
-  scale_y_continuous(expression(Net~Flux~"("*g~O[2]~m^{-2}~day^{-1}*")"),
-                     limits=c(-6,8), breaks=c(-4,0,4))+
-  scale_x_continuous("Day of Year", 
-                     limits=c(147,205), breaks=c(157,176,195))+
+params_full %>%
+  gather(par, value, -chain, -step) %>%
+  filter(par != "lp__") %>%
+  ggplot(aes(step, value, linetype=factor(chain)))+
+  facet_wrap(~par, scales="free_y")+
+  geom_line(alpha=0.5, show.legend = F)+
+  scale_y_continuous("Value")+
+  scale_x_continuous("Iteration", breaks = c(0, 500, 1000))+
   theme_base+
-  theme(legend.position = c(0.65,0.916))
-
-# examine and export
-f2
-# ggsave("main_analysis/analysis/figures/fig_2.pdf", f2, dpi = 300,
-#        height = 5, width = 5, units = "in")
+  theme(legend.position = c(0.8,0.15))
 
 
 
 
 
 #==========
-#========== Figure 3: Gas Exchange
+#========== Pairs Plot
+#==========
+
+params_full %>% 
+  filter(chain == 1) %>%
+  select(-chain, -step, -lp__) %>% 
+  ggpairs()+
+  theme_base
+
+
+
+
+
+
+#==========
+#========== Gas Exchange
 #==========
 
 # set pars to plot
@@ -108,8 +93,11 @@ post_dens = params_full %>%
   select(-chain, - step) %>%
   mutate(type = "Posterior")
 
+# combine densities
+comb_dens = bind_rows(prior_dens, post_dens)
+
 # plot
-bind_rows(prior_dens, post_dens) %>%
+comb_dens %>%
   ggplot(aes())+
   facet_wrap(~name, nrow = 2, scales = "free")+
   stat_density(aes(value, linetype = type),
@@ -127,6 +115,13 @@ bind_rows(prior_dens, post_dens) %>%
   scale_linetype_manual("",values=c(1,2))+
   theme_base+
   theme(legend.position = c(0.8,0.916))
+
+# compare sd of prior and posterior
+comb_dens %>%
+  group_by(name, type) %>%
+  summarize(sd = sd(value)) %>%
+  spread(type, sd) %>%
+  mutate(ratio = Posterior/Prior)
 
 
 
@@ -162,8 +157,11 @@ post_dens = params_full %>%
   select(-chain, - step) %>%
   mutate(type = "Posterior")
 
+# combine densities
+comb_dens = bind_rows(prior_dens, post_dens)
+
 # plot
-bind_rows(prior_dens, post_dens) %>%
+comb_dens %>%
   ggplot(aes())+
   facet_wrap(~name, nrow = 2)+
   stat_density(aes(value, linetype = type),
@@ -182,6 +180,13 @@ bind_rows(prior_dens, post_dens) %>%
   scale_linetype_manual("",values=c(1,2))+
   theme_base+
   theme(legend.position = c(0.8,0.916))
+
+# compare sd of prior and posterior
+comb_dens %>%
+  group_by(name, type) %>%
+  summarize(sd = sd(value)) %>%
+  spread(type, sd) %>%
+  mutate(ratio = Posterior/Prior)
 
 
 
@@ -217,8 +222,11 @@ post_dens = params_full %>%
   select(-chain, - step) %>%
   mutate(type = "Posterior")
 
+# combine densities
+comb_dens = bind_rows(prior_dens, post_dens)
+
 # plot
-bind_rows(prior_dens, post_dens) %>%
+comb_dens %>%
   ggplot(aes())+
   facet_wrap(~name, nrow = 2)+
   stat_density(aes(value, linetype = type),
@@ -237,6 +245,13 @@ bind_rows(prior_dens, post_dens) %>%
   scale_linetype_manual("",values=c(1,2))+
   theme_base+
   theme(legend.position = c(0.8,0.916))
+
+# compare sd of prior and posterior
+comb_dens %>%
+  group_by(name, type) %>%
+  summarize(sd = sd(value)) %>%
+  spread(type, sd) %>%
+  mutate(ratio = Posterior/Prior)
 
 
 
@@ -272,8 +287,11 @@ post_dens = params_full %>%
   select(-chain, - step) %>%
   mutate(type = "Posterior")
 
+# combine densities
+comb_dens = bind_rows(prior_dens, post_dens)
+
 # plot
-bind_rows(prior_dens, post_dens) %>%
+comb_dens %>%
   ggplot(aes())+
   facet_wrap(~name, nrow = 2)+
   stat_density(aes(value, linetype = type),
@@ -292,6 +310,13 @@ bind_rows(prior_dens, post_dens) %>%
   scale_linetype_manual("",values=c(1,2))+
   theme_base+
   theme(legend.position = c(0.8,0.916))
+
+# compare sd of prior and posterior
+comb_dens %>%
+  group_by(name, type) %>%
+  summarize(sd = sd(value)) %>%
+  spread(type, sd) %>%
+  mutate(ratio = Posterior/Prior)
 
 
 
@@ -327,8 +352,11 @@ post_dens = params_full %>%
   select(-chain, - step) %>%
   mutate(type = "Posterior")
 
+# combine densities
+comb_dens = bind_rows(prior_dens, post_dens)
+
 # plot
-bind_rows(prior_dens, post_dens) %>%
+comb_dens %>%
   ggplot(aes())+
   facet_wrap(~name, nrow = 2)+
   stat_density(aes(value, linetype = type),
@@ -343,9 +371,14 @@ bind_rows(prior_dens, post_dens) %>%
              size = 0.8)+
   scale_y_continuous("Probability Density")+
   scale_x_continuous("Value",
-                     limits=c(0,0.3))+
+                     limits=c(0,1))+
   scale_linetype_manual("",values=c(1,2))+
   theme_base+
   theme(legend.position = c(0.8,0.916))
 
-
+# compare sd of prior and posterior
+comb_dens %>%
+  group_by(name, type) %>%
+  summarize(sd = sd(value)) %>%
+  spread(type, sd) %>%
+  mutate(ratio = Posterior/Prior)
