@@ -104,9 +104,9 @@ model {
   sig_proc ~ normal(sig_proc_prior[1], sig_proc_prior[2]) T[0, ]; 
   // initial values
   for(y in 1:Y){
-    log_beta0_init[y] ~ normal(5.5, 5.5); 
-    log_alpha_init[y] ~ normal(1, 1); 
-    log_rho_init[y] ~ normal(5.5, 5.5); 
+    log_beta0_init[y] ~ normal(log_beta0_prior[1], log_beta0_prior[2]); 
+    log_alpha_init[y] ~ normal(log_alpha_prior[1], log_alpha_prior[2]); 
+    log_rho_init[y] ~ normal(log_rho_prior[1], log_rho_prior[2]); 
   }
   // z values for non-centered parameterization
   z_beta0 ~ normal(0, 1);
