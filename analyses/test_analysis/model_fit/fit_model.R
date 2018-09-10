@@ -6,11 +6,12 @@
 library(tidyverse)
 library(rstan)
 library(truncnorm)
+library(GGally)
 source("model/stan_utility.R")
 
 # stan settings
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores()-1)
+options(mc.cores = parallel::detectCores()-2)
 
 # read data
 data = read_rdump("analyses/test_analysis/model_fit/input/sonde_list.R")
@@ -44,6 +45,9 @@ priors$k0_prior %>%
 # export priors
 # as_data_frame(append(list(par = c("mean","sd")), priors)) %>%
 #   write_csv("analyses/test_analysis/model_fit/input/priors.csv")
+
+# add priors to data
+data_full = data %>% append(priors)
   
 # function for initial values
 init_fn = function(){
@@ -74,12 +78,12 @@ init_fn = function(){
 
 # initial specifications
 model = "o2_model"
-model_path = paste0("main_analysis/fit_model/",model,".stan")
-chains = 1
-iter = 1000
+model_path = paste0("model/",model,".stan")
+chains = 4
+iter = 2000
 
 # fit model
-fit = stan(file = model_path, data = data, seed=1, chains = chains,
+fit = stan(file = model_path, data = data_full, seed=1, chains = chains,
            init = init_fn, iter = iter)
 
 # summary of fit
@@ -87,8 +91,11 @@ fit_summary = summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>%
 {as_data_frame(.) %>%
     mutate(var = rownames(summary(fit)$summary))}
 
-# check Rhat
+# check Rhat & n_eff
+# note that initial values beta0, alpha, and rho sample for an extra year
+# these extra values do not contribute to the likelihood
 fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var)
+fit_summary %>% filter(n_eff < 0.5*(iter/2)) %>% select(Rhat, n_eff, var)
 
 # additional diagnostics
 check_div(fit)
@@ -121,7 +128,7 @@ fixed_pars %>%
   theme_bw()
 
 # pairs plot for parameters
-# ggpairs(fixed_pars %>% select(-chain, -step))
+ggpairs(fixed_pars %>% select(-chain, -step))
 
 
 
@@ -144,8 +151,6 @@ post_pred %>%
   ggplot(aes(chi_proc_real,chi_proc_sim))+
   geom_point()+
   geom_abline(intercept=0, slope=1)+
-  scale_y_continuous(limits=c(5000,5900))+
-  scale_x_continuous(limits=c(5000,5900))+
   theme_bw()
 
 # observation error
@@ -153,8 +158,6 @@ post_pred %>%
   ggplot(aes(chi_obs_real,chi_obs_sim))+
   geom_point()+
   geom_abline(intercept=0, slope=1)+
-  scale_y_continuous(limits=c(5000,5900))+
-  scale_x_continuous(limits=c(5000,5900))+
   theme_bw()
   
 
@@ -187,7 +190,7 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # Export
-output_path = "main_analysis/model_output"
+output_path = "analyses/test_analysis/model_fit/output"
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
 # write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
 # write_csv(daily, paste0(output_path,"/daily_full.csv"))
