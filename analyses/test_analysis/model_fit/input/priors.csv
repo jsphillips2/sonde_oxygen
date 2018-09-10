@@ -1,3 +1,12 @@
-par,gamma_1_prior,gamma_2_prior,k0_prior,k1_prior,sig_beta0_prior,sig_alpha_prior,sig_rho_prior,sig_proc_prior,log_beta0_prior,log_alpha_prior,log_rho_prior
-mean,1.1,1.1,2,0.2,0,0,0,100,5.5,1,5.5
-sd,0.5,0.5,1,0.1,0.5,0.05,0.5,100,5.5,1,5.5
+name,mean,sd
+gamma_1_prior,1.1,1
+gamma_2_prior,1.1,1
+k0_prior,2,1
+k1_prior,0.2,0.1
+log_alpha_prior,2,4
+log_beta0_prior,5,7
+log_rho_prior,5,7
+sig_alpha_prior,0,1
+sig_beta0_prior,0,1
+sig_proc_prior,100,100
+sig_rho_prior,0,1
