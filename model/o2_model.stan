@@ -21,12 +21,24 @@ data {
   real<lower=0> temp_ref; // reference temperature [C]
   real<lower=0> k2; // gas exhange constant 2
   real<lower=0> sig_obs; // observation error sd [g m^-3]
+  // priors
+  vector[2] k0_prior;
+  vector[2] k1_prior;
+  vector[2] gamma_1_prior;
+  vector[2] gamma_2_prior;
+  vector[2] sig_beta0_prior;
+  vector[2] sig_alpha_prior;
+  vector[2] sig_rho_prior;
+  vector[2] sig_proc_prior;
+  vector[2] log_beta0_prior;
+  vector[2] log_alpha_prior;
+  vector[2] log_rho_prior;
 }
 parameters{
-  real<lower=1> gamma_1; // scaling of gpp with temperature
-  real<lower=1> gamma_2; // scaling of er with temperature
   real<lower=0> k0; // gas exchange constant 0
   real<lower=0> k1; // gas exchange constant 1
+  real<lower=1> gamma_1; // scaling of gpp with temperature
+  real<lower=1> gamma_2; // scaling of er with temperature
   real<lower=0> sig_beta0; // sd of log_beta0 random walk 
   real<lower=0> sig_alpha; // sd of log_rho random walk 
   real<lower=0> sig_rho; // sd of log_rho random walk 
@@ -82,18 +94,20 @@ transformed parameters {
 }
 model {
   // priors
-  gamma_1 ~ normal(1.1, 0.4) T[1, ]; 
-  gamma_2 ~ normal(1.1, 0.4) T[1, ]; 
-  k0 ~ normal(2, 2) T[0, ]; 
-  k1 ~ normal(0.2, 0.2) T[0, ]; 
-  sig_beta0 ~ normal(0.01, 0.1) T[0, ]; 
-  sig_alpha ~ normal(0.001, 0.01) T[0, ]; 
-  sig_rho ~ normal(0.01, 0.1) T[0, ]; 
-  sig_proc ~ normal(100, 100) T[0, ]; 
+  k0 ~ normal(k0_prior[1], k0_prior[2]) T[0, ]; 
+  k1 ~ normal(k1_prior[1], k1_prior[2]) T[0, ]; 
+  gamma_1 ~ normal(gamma_1_prior[1], gamma_1_prior[2]) T[1, ]; 
+  gamma_2 ~ normal(gamma_2_prior[1], gamma_2_prior[2]) T[1, ]; 
+  sig_beta0 ~ normal(sig_beta0_prior[1], sig_beta0_prior[2]) T[0, ]; 
+  sig_alpha ~ normal(sig_alpha_prior[1], sig_alpha_prior[2]) T[0, ]; 
+  sig_rho ~ normal(sig_rho_prior[1], sig_rho_prior[2]) T[0, ]; 
+  sig_proc ~ normal(sig_proc_prior[1], sig_proc_prior[2]) T[0, ]; 
   // initial values
-  log_beta0_init ~ normal(5.5, 5.5); 
-  log_alpha_init ~ normal(1, 1); 
-  log_rho_init ~ normal(5.5, 5.5); 
+  for(y in 1:Y){
+    log_beta0_init[y] ~ normal(5.5, 5.5); 
+    log_alpha_init[y] ~ normal(1, 1); 
+    log_rho_init[y] ~ normal(5.5, 5.5); 
+  }
   // z values for non-centered parameterization
   z_beta0 ~ normal(0, 1);
   z_alpha ~ normal(0, 1);
