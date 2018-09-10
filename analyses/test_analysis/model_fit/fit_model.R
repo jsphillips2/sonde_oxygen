@@ -12,13 +12,8 @@ source("main_analysis/fit_model/stan_utility.R")
 rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-1)
 
-# simulation type and rep (seed)
-type = "fixed_none"
-rep = 5
-
 # read data
-import_file = paste0(type,"/rep_",rep)
-data = read_rdump(paste0("simulation/simulated_data/",import_file,"/data_list.R"))
+data = read_rdump("data/sonde_list.R")
 
 # function for initial values
 init_fn = function(){
@@ -119,8 +114,8 @@ post_pred %>%
   ggplot(aes(chi_proc_real,chi_proc_sim))+
   geom_point()+
   geom_abline(intercept=0, slope=1)+
-  scale_y_continuous(limits=c(1000,1350))+
-  scale_x_continuous(limits=c(1000,1350))+
+  scale_y_continuous(limits=c(5000,5900))+
+  scale_x_continuous(limits=c(5000,5900))+
   theme_bw()
 
 # observation error
@@ -128,10 +123,10 @@ post_pred %>%
   ggplot(aes(chi_obs_real,chi_obs_sim))+
   geom_point()+
   geom_abline(intercept=0, slope=1)+
-  scale_y_continuous(limits=c(1000,1350))+
-  scale_x_continuous(limits=c(1000,1350))+
+  scale_y_continuous(limits=c(5000,5900))+
+  scale_x_continuous(limits=c(5000,5900))+
   theme_bw()
-
+  
 
 
 
@@ -162,12 +157,11 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # Export
-output_path = "simulation/simulated_output/"
-# write_csv(fixed_pars, paste0(output_path,import_file,"/fixed_pars_full.csv"))
-# write_csv(post_pred, paste0(output_path,import_file,"/post_pred_full.csv"))
-# write_csv(daily, paste0(output_path,import_file,"/daily_full.csv"))
-# write_csv(fit_clean, paste0(output_path,import_file,"/summary_clean.csv"))
-
+output_path = "main_analysis/model_output"
+# write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
+# write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
+# write_csv(daily, paste0(output_path,"/daily_full.csv"))
+# write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
 
 
 
