@@ -192,8 +192,11 @@ fit_clean = fit_summary %>%
   select(name, index, day, middle, lower16, upper84) %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
-# export
+# export path
 output_path = "analyses/test_analysis/model_fit/output"
+# output_path = "analyses/test_analysis/model_fit/output/sig_obs10"
+
+# export
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
 # write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
 # write_csv(daily, paste0(output_path,"/daily_full.csv"))
