@@ -7,7 +7,7 @@ library(tidyverse)
 library(rstan)
 
 # select years desired for analysis
-years = c(2012, 2013, 2016, 2017)
+years = c(2016)
 
 # read data
 sonde = read_csv("data/sonde_final.csv") %>% 
@@ -48,31 +48,6 @@ sonde_prep %>%
   facet_wrap(~year)+
   geom_line()+
   theme_classic()
-
-# identify day with min values in 2013
-sonde_prep %>% 
-  group_by(year,yday) %>% 
-  summarize(do = mean(do, na.rm=T), temp=mean(temp)) %>% 
-  filter(year==2013) %>%
-  arrange(do)
-
-# plot hourly curves for those days
-sonde_prep %>%
-  filter(year==2013, yday %in% c(211:215)) %>%
-  group_by(yday) %>%
-  ggplot(aes(hour, do))+
-  facet_wrap(~yday, scale="free_y")+
-  geom_point()+
-  theme_classic()
-
-# these days show reasonable diel curves
-# they are very warm, so that could explain low values
-
-# late 2015 looks too sparse; filter for days < 184
-# truncate at day 230
-sonde_prep2 = sonde_prep %>%
-  filter(!(year==2015 & yday > 184), yday < 230) %>%
-  arrange(year, yday, hour)
 
 
 
@@ -128,12 +103,13 @@ sonde_prep2 %>%
 # check D_M day extraction
 sonde_prep3 %>% 
   ungroup() %>%
-  filter(D_M == sonde_prep3$D_M[1520])
+  filter(D_M == sonde_prep3$D_M[1000])
 
 # export prepared data
 # sonde_prep2 %>%
 #   left_join(sonde_prep3 %>% select(year, month, yday, hour, T_S, D_M)) %>%
-# write_csv("data/sonde_prep.csv")
+#   write_csv("analyses/test_analysis/model_fit/input/sonde_prep.csv")
+
 
 
 
@@ -170,6 +146,7 @@ dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
 # export as .R
 # stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
 #              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
-#              "sch_conv","z","sig_obs","k2"), file="data/sonde_list.R")
+#              "sch_conv","z","sig_obs","k2"), 
+#            file="analyses/test_analysis/model_fit/input/sonde_list.R")
 
 
