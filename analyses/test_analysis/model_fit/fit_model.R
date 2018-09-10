@@ -72,6 +72,8 @@ init_fn = function(){
 
 # set observation error 
 data_full$sig_obs = 10
+# data_full$sig_obs = 100
+
 
 
 
