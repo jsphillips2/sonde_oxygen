@@ -10,8 +10,10 @@ library(truncnorm)
 # import data and model fit
 input_dir = "analyses/test_analysis/model_fit/"
 priors = read_csv(paste0(input_dir,"input/priors.csv"))
-params_full = read_csv(paste0(input_dir,"output/fixed_pars_full.csv"))
-model_fit = read_csv(paste0(input_dir,"output/summary_clean.csv"))
+params_full = read_csv(paste0(input_dir,
+                              "output/sig_obs10/fixed_pars_full.csv"))
+model_fit = read_csv(paste0(input_dir,
+                            "output/sig_obs10/summary_clean.csv"))
 
 # base theme
 theme_base = theme_bw()+
