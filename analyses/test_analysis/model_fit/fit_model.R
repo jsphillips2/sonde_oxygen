@@ -195,8 +195,8 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # export path
-output_path = "analyses/test_analysis/model_fit/output"
-# output_path = "analyses/test_analysis/model_fit/output/sig_obs10"
+output_path = "analyses/test_analysis/model_fit/output/sig_obs10"
+# output_path = "analyses/test_analysis/model_fit/output/sig_obs100"
 
 # export
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
