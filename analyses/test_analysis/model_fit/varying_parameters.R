@@ -11,11 +11,8 @@ library(truncnorm)
 input_dir = "analyses/test_analysis/model_fit/"
 sonde_data = read_csv(paste0(input_dir,"input/sonde_prep.csv"))
 priors = read_csv(paste0(input_dir,"input/priors.csv"))
-model_fit = read_csv(paste0(input_dir,"output/summary_clean.csv"))
-
-
-
-
+model_fit = read_csv(paste0(input_dir,
+                            "output/sig_obs10/summary_clean.csv"))
 
 # base theme
 theme_base = theme_bw()+
