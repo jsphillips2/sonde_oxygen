@@ -127,10 +127,13 @@ data_sim = data_prep2 %>%
   mutate(type = type)
 
 # extract simulation type from specifications
-type = {data_prep2 %>% 
-    expand(fix_beta0, fix_alpha, fix_rho) %>%
-    gather(var, value, fix_beta0, fix_alpha, fix_rho) %>%
-    mutate(name = str_split(var,"_") %>% map_chr(~as.character(.x[2]))) %>%
+type_data = data_prep2 %>% 
+  expand(fix_beta0, fix_alpha, fix_rho) %>%
+  gather(var, value, fix_beta0, fix_alpha, fix_rho) %>%
+  mutate(name = str_split(var,"_") %>% map_chr(~as.character(.x[2]))) 
+
+# create name for type
+type = {type_data %>%
     filter(value == T)}$name %>%
   paste0(collapse = "", sep = "_") %>%
   paste0("fixed")
@@ -209,14 +212,15 @@ data_exp2 = data_exp %>%
 #   ungroup() %>%
 #   filter(D_M == data_exp2$D_M[1000])
 
-# export prepared data
+# export  data
 export_file = paste0(type)
 data_exp %>%
   left_join(data_exp2 %>% select(year, month, yday, hour, T_S, D_M)) %>%
   write_csv(paste0("analyses/test_analysis/simulation/input/",
                    export_file,"/data_export.csv"))
-
-
+type_data %>%
+  write_csv(paste0("analyses/test_analysis/simulation/input/",
+                   export_file,"/type_data.csv"))
 
 
 
