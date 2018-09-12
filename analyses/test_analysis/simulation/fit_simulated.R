@@ -14,12 +14,11 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-2)
 
 # simulation type and rep (seed)
-type = "fixed_beta0"
-rep = 4
-import_file = paste0(type,"/rep_",rep)
+type = "_fixed"
+import_file = paste0(type)
 
 # read data
-data = read_rdump(paste0("analyses/test_analysis/simulation/simulated_data/",
+data = read_rdump(paste0("analyses/test_analysis/simulation/input/",
                          import_file,"/data_list.R"))
 
 
@@ -51,7 +50,7 @@ priors = list(k0_prior = c(2, 1),
 as_data_frame(append(list(par = c("mean","sd")), priors)) %>%
   gather(name, value, 2:12) %>%
   spread(par, value) %>%
-  write_csv("analyses/test_analysis/model_fit/input/priors.csv")
+  write_csv(paste0("analyses/test_analysis/simulation/input/",type,"/priors.csv"))
 
 # add priors to data
 data_full = data %>% append(priors)
@@ -89,7 +88,7 @@ data_full$sig_obs = 10
 model = "o2_model"
 model_path = paste0("model/",model,".stan")
 chains = 1
-iter = 2000
+iter = 1000
 
 # fit model
 fit = stan(file = model_path, data = data_full, seed=1, chains = chains,
@@ -202,7 +201,7 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # export path
-output_path = "analyses/test_analysis/simulation/simulated_output/"
+output_path = "analyses/test_analysis/simulation/output/"
 
 # export
 write_csv(fixed_pars, paste0(output_path,import_file,"/fixed_pars_full.csv"))
