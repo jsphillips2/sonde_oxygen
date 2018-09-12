@@ -108,10 +108,11 @@ sim_fn = function(x){
 #==========
 
 # simulate data 
+# specify which variables should be 'fixed' to their mean
 data_prep2 = data_prep %>% 
   mutate(
-    fix_beta0 = F,
-    fix_alpha = F,
+    fix_beta0 = T,
+    fix_alpha = T,
     fix_rho = T,
     beta0 = ifelse(fix_beta0 == T, mean(beta0, na.rm=T), beta0),
     alpha = ifelse(fix_alpha == T, mean(alpha, na.rm=T), alpha),
@@ -125,6 +126,15 @@ data_sim = data_prep2 %>%
               bind_rows()) %>%
   mutate(type = type)
 
+# extract simulation type from specifications
+type = {data_prep2 %>% 
+    expand(fix_beta0, fix_alpha, fix_rho) %>%
+    gather(var, value, fix_beta0, fix_alpha, fix_rho) %>%
+    mutate(name = str_split(var,"_") %>% map_chr(~as.character(.x[2]))) %>%
+    filter(value == T)}$name %>%
+  paste0(collapse = "", sep = "_") %>%
+  paste0("fixed")
+
 # plot and compare to actual data
 data_sim %>%
   mutate(time = yday + hour/24) %>%
@@ -134,16 +144,10 @@ data_sim %>%
   geom_line(alpha = 0.7, size = 0.7)+
   scale_color_manual(values=c("firebrick","dodgerblue"))+
   scale_y_continuous(limits=c(8,14))+
+  ggtitle(type)+
   theme_base
 
-# extract simulation type from specifications
-type = {data_prep2 %>% 
-    expand(fix_beta0, fix_rho, fix_alpha) %>%
-    gather(var, value, fix_beta0, fix_rho, fix_alpha) %>%
-    mutate(name = str_split(var,"_") %>% map_chr(~as.character(.x[2]))) %>%
-    filter(value == T)}$name %>%
-  paste0(collapse = "", sep = "_") %>%
-  paste0("fixed")
+
 
 
 
