@@ -158,19 +158,22 @@ comb_dens = bind_rows(prior_dens, post_dens)
 
 # plot
 p = comb_dens %>%
+  mutate(name = ifelse(name == "k0", 'k[0]', "k[1]")) %>%
   ggplot(aes())+
-  facet_wrap(~name, nrow = 2, scales = "free")+
+  facet_wrap(~name, nrow = 2, scales = "free", labeller = label_parsed)+
   stat_density(aes(value, linetype = type),
                geom = "line", size = 0.4, position="identity")+
   geom_rect(data = model_fit %>%
-              filter(name %in% pars),
+              filter(name %in% pars) %>%
+              mutate(name = ifelse(name == "k0", 'k[0]', "k[1]")),
             aes(xmin = lower16, xmax = upper84, ymin = 0, ymax = Inf),
             inherit.aes = F, alpha = 0.2)+
   geom_vline(data = model_fit %>%
-               filter(name %in% pars),
+               filter(name %in% pars) %>%
+               mutate(name = ifelse(name == "k0", 'k[0]', "k[1]")),
              aes(xintercept = middle),
              size = 0.8)+
-  scale_y_continuous("Probability Density")+
+  scale_y_continuous("Posterior Probability", breaks = NULL)+
   scale_x_continuous("Value")+
   scale_linetype_manual("",values=c(1,2))+
   theme_base+
