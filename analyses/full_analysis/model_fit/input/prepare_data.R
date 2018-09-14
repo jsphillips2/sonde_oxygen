@@ -7,14 +7,17 @@ library(tidyverse)
 library(rstan)
 
 # select years desired for analysis
-years = c(2016)
+years = c(2012,2013,2015,2016,2017)
 
 # read data
 sonde = read_csv("data/sonde_final.csv") %>% 
   # extract desired years
   filter(year %in% years) %>%
   # convert hour from 0:23 to 1:24 (this makes indexing easier later)
-  mutate(hour = hour + 1)
+  mutate(hour = hour + 1) %>%
+  # truncate at day 230 (2017 extended into Sept. and Oct.)
+  filter(yday < 230)
+
 
 
 
@@ -49,7 +52,22 @@ sonde_prep %>%
   geom_line()+
   theme_classic()
 
+# 2015
+sonde_prep %>% 
+  filter(year == 2015) %>%
+  filter(yday < 184) %>%
+  group_by(year,yday) %>% 
+  summarize(do = mean(do, na.rm=T)) %>%
+  ggplot(aes(yday, do))+
+  geom_line()+
+  geom_point()+
+  theme_classic()
 
+# remove data beyond day 184
+# truncate at day 230 (2017 extended into Sept. and Oct.)
+sonde_prep2 = sonde_prep %>% 
+  filter(!(year == 2015 & yday > 184), yday < 230) %>%
+  arrange(year, yday, hour)
 
 
 
@@ -62,7 +80,7 @@ sonde_prep %>%
 # omit NA's 
 # replace 0 PAR with minimum non-0 PAR
 # convert to data frame
-sonde_prep3 = sonde_prep %>%
+sonde_prep3 = sonde_prep2 %>%
   group_by(year) %>%
   mutate(j = ifelse(is.na(do)==T, 1, 0), 
          k = c(1,abs(diff(j)))) %>% 
@@ -78,7 +96,7 @@ sonde_prep3 = sonde_prep %>%
   as.data.frame()
 
 # check T_S
-sonde_prep %>% 
+sonde_prep2 %>% 
   expand(year,month,yday,hour) %>%
   full_join(sonde_prep3) %>%
   arrange(year,yday) %>%
@@ -89,7 +107,7 @@ sonde_prep %>%
   theme_bw()
 
 # check D_M
-sonde_prep %>% 
+sonde_prep2 %>% 
   expand(year,month,yday,hour) %>%
   full_join(sonde_prep3) %>%
   arrange(year,yday) %>%
@@ -108,7 +126,7 @@ sonde_prep3 %>%
 # export prepared data
 # sonde_prep %>%
 #   left_join(sonde_prep3 %>% select(year, month, yday, hour, T_S, D_M)) %>%
-#   write_csv("analyses/test_analysis/model_fit/input/sonde_prep.csv")
+#   write_csv("analyses/full_analysis/model_fit/input/sonde_prep.csv")
 
 
 
@@ -146,6 +164,6 @@ dy_st = c(1, if(Y < 2) 1 else c(cumsum((K)[1:(Y-1)]) + 1, 1))
 # stan_rdump(c("D_M","S","K","N","D","Y","T_S","o2_st","dy_st",
 #              "o2_obs","o2_eq","light","temp","temp_ref", "wspeed",
 #              "sch_conv","z","k2"),
-#            file="analyses/test_analysis/model_fit/input/sonde_list.R")
+#            file="analyses/full_analysis/model_fit/input/sonde_list.R")
 
 
