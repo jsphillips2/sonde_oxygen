@@ -11,7 +11,7 @@ source("model/stan_utility.R")
 
 # stan settings
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores()-4)
+options(mc.cores = parallel::detectCores()-2)
 
 # read data
 data = read_rdump("analyses/full_analysis/model_fit/input/sonde_list.R")
