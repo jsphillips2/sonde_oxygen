@@ -8,7 +8,7 @@ library(GGally)
 library(truncnorm)
 
 # import data and model fit
-input_dir = "analyses/test_analysis/model_fit/"
+input_dir = "analyses/full_analysis/model_fit/"
 priors = read_csv(paste0(input_dir,"input/priors.csv"))
 params_full = read_csv(paste0(input_dir,
                               "output/sig_obs10/fixed_pars_full.csv"))
@@ -178,7 +178,7 @@ comb_dens %>%
              size = 0.8)+
   scale_y_continuous("Probability Density")+
   scale_x_continuous("Value",
-                     limits=c(75,125))+
+                     limits=c(75,100))+
   scale_linetype_manual("",values=c(1,2))+
   theme_base+
   theme(legend.position = c(0.8,0.916))
