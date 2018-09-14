@@ -1,0 +1,417 @@
+#==========
+#========== Preliminaries
+#==========
+
+# load packages
+library(tidyverse)
+
+# import data and model fit
+sonde_data = read_csv("data/sonde_prep.csv")
+params_full = read_csv("main_analysis/model_output/fixed_pars_full.csv")
+post_pred = read_csv("main_analysis/model_output/post_pred_full.csv")
+model_fit = read_csv("main_analysis/model_output/summary_clean.csv")
+
+# base theme
+theme_base = theme_bw()+
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        legend.margin = margin(0,0,0,0),
+        text = element_text(size=12),
+        strip.text = element_text(size=10),
+        legend.text = element_text(size=10),
+        axis.text=element_text(size=10, color="black"),
+        axis.title.y=element_text(margin=margin(0,15,0,0)),
+        axis.title.x=element_text(margin=margin(15,0,0,0)))
+
+
+
+
+
+#==========
+#========== Figure 1: Posterior Predictive Check
+#==========
+
+# split by type (simualted vs. observe)
+post_pred_split = post_pred %>%
+  gather(var, chi_squared) %>%
+  mutate(stoch = strsplit(var,"\\_") %>% map_chr(~.x[2]),
+         type = strsplit(var,"\\_") %>% map_chr(~.x[3])) %>%
+  split(.$type) 
+
+# combine with separete columns for simulated and observed
+# plot
+f1 = lapply(1:length(post_pred_split), function(x){
+  y = post_pred_split[[x]] %>% select(chi_squared, stoch)
+  names(y) = c(names(post_pred_split)[x], "stoch")
+  return(y)}) %>% 
+  bind_cols %>% 
+  select(-stoch1) %>%
+  mutate(Stoch = ifelse(stoch=="obs","Observation Error","Process Error"),
+         Stoch = factor(Stoch, levels=c("Process Error","Observation Error"))) %>%
+  ggplot(aes(real,sim))+
+  facet_wrap(~Stoch, nrow=2)+
+  geom_point(size=2, alpha=0.5)+
+  geom_abline(intercept=0, slope=1)+
+  scale_y_continuous(expression(chi^2~"Simulated"), limits=c(5000,5900), 
+                     breaks=c(5200,5500,5800))+
+  scale_x_continuous(expression(chi^2~"Real"),limits=c(5000,5900), 
+                     breaks=c(5200,5500,5800))+
+  coord_equal()+
+  theme_base
+
+# examine and export
+f1
+# ggsave("main_analysis/analysis/figures/fig_1.pdf", f1, dpi = 300,
+#        height = 6, width = 3.5, units = "in")
+
+
+
+
+
+#==========
+#========== Figure 2: Net Daily Fluxes
+#==========
+
+f2 = model_fit %>%
+  filter(name=="Flux") %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              arrange(year,yday,hour) %>%
+              mutate(d_do = c(NA,diff(do))) %>%
+              summarize(day = unique(D_M),
+                        d_do = 24*mean(d_do,na.rm=T))) %>%
+  full_join(sonde_data %>% expand(year,yday)) %>%
+  select(year,yday,middle,d_do) %>%
+  gather(var, value, c(middle,d_do)) %>%
+  mutate(var = ifelse(var=="middle","NEP + AIR","Observed"),
+         var = factor(var, levels=c("Observed","NEP + AIR")),
+         value = 3.3*value/1000) %>%
+  ggplot(aes(yday, value, color=var, size=var))+
+  facet_wrap(~year)+
+  geom_hline(yintercept = 0, alpha=0.5, size=0.5)+
+  geom_line()+
+  scale_color_manual("",values=c("gray50","black"))+
+  scale_size_manual("",values=c(0.5,0.7))+
+  scale_y_continuous(expression(Net~Flux~"("*g~O[2]~m^{-2}~day^{-1}*")"),
+                     limits=c(-6,8), breaks=c(-4,0,4))+
+  scale_x_continuous("Day of Year", 
+                     limits=c(150,240), breaks=c(165,195,225))+
+  theme_base+
+  theme(legend.position = c(0.65,0.916))
+
+# examine and export
+f2
+# ggsave("main_analysis/analysis/figures/fig_2.pdf", f2, dpi = 300,
+#        height = 5, width = 5, units = "in")
+
+
+
+
+
+#==========
+#========== Figure 3: Daily Metabolism
+#==========
+
+f3 = model_fit %>%
+  filter(name %in% c("GPP","ER","NEP")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  full_join(sonde_data %>% expand(year,yday,name=c("GPP","ER","NEP"))) %>%
+  mutate(middle = ifelse(name=="ER",-middle,middle)/1000,
+         lower16 = ifelse(name=="ER",-lower16,lower16)/1000,
+         upper84 = ifelse(name=="ER",-upper84,upper84)/1000,
+         name = factor(name, levels=c("GPP","NEP","ER"))) %>%
+  {ggplot(., aes(yday, middle, color=name))+
+      facet_wrap(~year)+
+      geom_hline(yintercept = 0, alpha=0.5, size=0.2)+
+      geom_ribbon(aes(ymin=lower16, ymax=upper84, fill=name),
+                  linetype=0, alpha=0.35)+
+      geom_line(size=0.6)+
+      geom_line(data=.%>% filter(is.na(middle)==F), size=0.3, linetype=2)+
+      scale_color_manual("",values=c("dodgerblue","gray40","firebrick"))+
+      scale_fill_manual("",values=c("dodgerblue","gray40","firebrick"))+
+      scale_y_continuous(expression(Metabolism~"("*g~O[2]~m^{-2}~day^{-1}*")"),
+                         limits=c(-10,10), breaks=c(-6,0,6))+
+      scale_x_continuous("Day of Year", 
+                         limits=c(150,240), breaks=c(165,195,225))+
+      theme_base+
+      theme(legend.position = c(0.9,0.886))
+  }
+  
+# examine and export
+f3
+# ggsave("main_analysis/analysis/figures/fig_3.pdf", f3, dpi = 300,
+#        height = 5, width = 5, units = "in")
+
+
+
+
+
+#==========
+#========== Figure 4: RESP vs. GPP
+#==========
+
+# prep data
+met_d = model_fit %>%
+  filter(name %in% c("GPP","ER","NEP")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  select(-lower16, -upper84) %>%
+  mutate(middle = middle/1000) %>%
+  spread(name, middle) 
+
+# plot
+f4 = met_d %>%
+  ggplot(aes(GPP, ER, color=factor(year)))+
+  geom_point(size=2)+
+  geom_abline(intercept=0, slope=1)+
+  scale_color_manual("",values=c("gray60","gray40","gray25","black"),
+                     guide=guide_legend(nrow=2, ncol=2))+
+  scale_y_continuous(expression(ER~"("*g~O[2]~m^{-2}~day^{-1}*")"), 
+                     limits=c(2,9), breaks=c(4,6,8))+
+  scale_x_continuous(expression(GPP~"("*g~O[2]~m^{-2}~day^{-1}*")"), 
+                     limits=c(2,9), breaks=c(4,6,8))+
+  coord_equal()+
+  theme_base+
+  theme(legend.position = c(0.25,0.9), legend.direction = "horizontal")
+
+# examine and export
+f4
+# ggsave("main_analysis/analysis/figures/fig_4.pdf", f4, dpi = 300,
+#        height = 3.5, width = 3.5, units = "in")
+
+# calculate correlation
+met_d %>% 
+with(cor(GPP, ER))
+
+# calculate correlation by year
+met_d %>%
+  split(.$year) %>%
+  lapply(function(x){with(x,cor(GPP, ER))})
+
+# means
+model_fit %>%
+  filter(name %in% c("GPP_mean","ER_mean","NEP_mean")) %>%
+  mutate(middle = middle/1000,
+         lower16 = lower16/1000,
+         upper84 = upper84/1000)
+
+
+
+
+
+#==========
+#========== Figure 5: beta and rho
+#==========
+
+# prep data
+resp_d = model_fit %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  mutate(middle = middle/1000,
+         lower16 = lower16/1000,
+         upper84 = upper84/1000) %>%
+  arrange(year,yday)
+
+# plots
+f5 = resp_d %>%
+  ggplot(aes(yday, middle, color=name))+
+  facet_wrap(~year, labeller=label_parsed)+
+  geom_hline(yintercept = 0.3, alpha=0.5, size=0.2)+
+  geom_ribbon(aes(ymin=lower16, ymax=upper84, fill=name),
+                linetype=0, alpha=0.35)+
+  geom_line(size=0.6)+
+  scale_color_manual("",values=c("dodgerblue","firebrick"), 
+                     labels = c(expression(beta^0), expression(rho)))+
+  scale_fill_manual("",values=c("dodgerblue","firebrick"), 
+                    labels = c(expression(beta^0), expression(rho)))+
+  scale_y_continuous(expression("Metabolism Parameter (g "*O[2]~m^{-2}~h^{-1}*")"),
+                     breaks=c(0.15,0.3,0.45))+
+  scale_x_continuous("Day of Year", 
+                     limits=c(150,240), breaks=c(165,195,225))+
+  theme_base+
+  theme(legend.text.align = 0,
+        legend.position = c(0.9,0.9))
+
+# examine and export
+f5
+# ggsave("main_analysis/analysis/figures/fig_5.pdf", f5, dpi = 300,
+#        height = 5, width = 5, units = "in")
+
+# calculate correlation
+resp_d %>% 
+  select(-lower16, -upper84) %>%
+  spread(name, middle) %>%
+with(cor(beta0, rho))
+
+# calculate correlation (without 2017)
+resp_d %>% 
+  select(-lower16, -upper84) %>%
+  spread(name, middle) %>%
+  filter(year!=2017) %>%
+  with(cor(beta0, rho))
+
+# calculate correlation for each year
+resp_d %>% 
+  select(-lower16, -upper84) %>%
+  spread(name, middle) %>%
+  split(.$year) %>%
+  lapply(function(x){with(x,cor(beta0, rho))})
+  
+
+
+
+
+#==========
+#========== Figure 6: alpha
+#==========
+
+f6 = model_fit %>%
+  filter(name %in% c("alpha")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  mutate(middle = middle,
+         lower16 = lower16,
+         upper84 = upper84) %>%
+  arrange(year,yday) %>%
+  ggplot(aes(yday, middle))+
+  facet_wrap(~year)+
+  geom_ribbon(aes(ymin=lower16, ymax=upper84),
+              linetype=0, alpha=0.35)+
+  geom_line(size=0.6)+
+  scale_y_continuous(expression(alpha~"("*mg~O[2]~s~mu*mol-photons^{-1}~h^{-1}*")"))+
+  scale_x_continuous("Day of Year", 
+                     limits=c(150,240), breaks=c(165,195,225))+
+  theme_base
+
+# examine and export
+f6
+# ggsave("main_analysis/analysis/figures/fig_6.pdf", f6, dpi = 300,
+#        height = 5, width = 5, units = "in")
+
+
+
+
+
+#==========
+#========== Figure 7: beta0 vs. rho
+#==========
+
+f7 = model_fit %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  select(-lower16, -upper84) %>%
+  mutate(middle = middle/1000) %>%
+  spread(name, middle) %>%
+  {ggplot(.,aes(beta0, rho))+
+      geom_path(aes(color=factor(year)), size=0.4)+
+      geom_point(aes(color=factor(year)), size=0.8, shape=1)+
+      geom_point(data=. %>% group_by(year) %>% 
+                   summarize(beta0 = beta0[1], rho = rho[1]),
+                 aes(color=factor(year)),
+                 size = 2, shape = 15)+
+      geom_point(data=. %>% group_by(year) %>% 
+                   summarize(beta0 = beta0[length(beta0)], rho = rho[length(rho)]),
+                 aes(color=factor(year)),
+                 size = 2, shape = 17)+
+      geom_text(data=. %>% group_by(year) %>% 
+                  summarize(beta0 = beta0[1] - 0.02, rho = rho[1] + 0.003), 
+                aes(label=year), size = 3.5)+
+      scale_color_manual("",values=c("gray70","gray40","gray25","black"), guide=F)+
+      scale_y_continuous(expression(rho~"("*g~O[2]~m^{-2}~h^{-1}*")"))+
+      scale_x_continuous(expression(beta^0~"("*g~O[2]~m^{-2}~h^{-1}*")"))+
+      theme_base}
+
+# examine and export
+f7
+# ggsave("main_analysis/analysis/figures/fig_7.pdf", f7, dpi = 300,
+#        height = 3.5, width = 3.5, units = "in")
+
+
+
+
+
+#==========
+#========== Figure 8: P-I Curves
+#==========
+
+# select days 
+# 6 days spanning 6 weeks in 2012
+dy = 7*c(1:6)
+
+# extract estimates for beta0 and rho
+beta_rho = model_fit %>%
+  filter(day %in% dy,
+         name %in% c("beta0","rho")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  spread(name, middle) %>%
+  mutate(beta0 = beta0/1000,
+         rho = rho/1000,
+         max = (beta0 - rho),
+         Day = paste("Day",yday))
+
+# calcualte observed DO flux for desired days
+# correct observed flux for estimated exchange with atmosphere
+# combine with esimtates of "nep" and "air"
+flux_d = sonde_data %>%
+  rename(day = D_M) %>%
+  filter(day  %in% dy) %>%
+  select(year, month, day, yday, hour, par, do) %>%
+  group_by(yday) %>%
+  left_join(model_fit %>%
+              filter(name %in% c("nep","air")) %>%
+              select(index, day, name, middle) %>%
+              spread(name, middle) %>%
+              select(-index) %>%
+              group_by(day) %>%
+              mutate(hour = 1:24)) %>%
+  mutate(do_flux = c(3.3*diff(do)/1000, NA),
+         air = air/1000,
+         nep = nep/1000,
+         flux_correct = do_flux - air) 
+
+# plot
+flux_d %>%
+  filter(flux_correct > -2) %>%
+  mutate(Day = paste("Day",yday)) %>%
+  ggplot(aes(par, flux_correct))+
+  facet_wrap(~Day)+
+  geom_hline(yintercept = 0, size= 0.2)+
+  geom_point(size = 2, alpha = 0.8)+
+  geom_line(aes(y = nep), size= 0.8)+
+  geom_hline(data = beta_rho, aes(yintercept = beta0), color="dodgerblue")+
+  geom_hline(data = beta_rho, aes(yintercept = -rho), color="firebrick")+
+  scale_y_continuous(expression(Corrected~DO~Flux~"("*g~O[2]~m^{-2}~day^{-1}*")"),
+                     limits=c(-1,1))+
+  scale_x_continuous(expression("PAR ("*mu*mol~photons~m^{-2}~s^{-1}*")"))+
+  theme_base
+
+
+
+
+
+
+
+#==========
+#========== Appendix: Fixed Parameters
+#==========
+
+# pairs plot
+ggpairs(params_full %>% select(-step, -chain, -lp__))
+
+# values
+model_fit %>%
+  filter(name %in% 
+           c("gamma_1","gamma_2","sig_beta0","sig_rho","sig_proc","k0","k1")) %>%
+  select(-index, -day)
+  
+
