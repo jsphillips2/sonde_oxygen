@@ -137,4 +137,57 @@ model_fit %>%
 
 
 
+#==========
+#========== GPP vs ER
+#==========
+
+model_fit %>%
+  filter(name %in% c("GPP","ER","NEP")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  select(-lower16, -upper84) %>%
+  mutate(middle = middle/1000) %>%
+  spread(name, middle) %>%
+  ggplot(aes(GPP, ER))+
+  geom_point(size=2)+
+  geom_abline(intercept=0, slope=1)+
+  scale_y_continuous(expression(ER~"("*g~O[2]~m^{-2}~day^{-1}*")"), 
+                     limits=c(2,9), breaks=c(4,6,8))+
+  scale_x_continuous(expression(GPP~"("*g~O[2]~m^{-2}~day^{-1}*")"), 
+                     limits=c(2,9), breaks=c(4,6,8))+
+  coord_equal()+
+  theme_base+
+  theme(legend.position = c(0.25,0.9), legend.direction = "horizontal")
+
+
+
+
+
+#==========
+#========== beta0 vs rho
+#==========
+
+model_fit %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(sonde_data %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(D_M))) %>%
+  select(-lower16, -upper84) %>%
+  mutate(middle = middle/1000) %>%
+  spread(name, middle) %>%
+  {ggplot(.,aes(beta0, rho))+
+      geom_path(aes(group=factor(year)), size=0.5, alpha = 0.7)+
+      geom_point(data=. %>% group_by(year) %>% 
+                   summarize(beta0 = beta0[1], rho = rho[1]),
+                 size = 2.5, shape = 15)+
+      geom_point(data=. %>% group_by(year) %>% 
+                   summarize(beta0 = beta0[length(beta0)], rho = rho[length(rho)]),
+                 size = 2.5, shape = 17)+
+      geom_text(data=. %>% group_by(year) %>% 
+                  summarize(beta0 = beta0[1] - 0.02, rho = rho[1] + 0.003), 
+                aes(label=year), size = 3.5)+
+      scale_y_continuous(expression(rho~"("*g~O[2]~m^{-2}~h^{-1}*")"))+
+      scale_x_continuous(expression(beta^0~"("*g~O[2]~m^{-2}~h^{-1}*")"))+
+      theme_base}
 
