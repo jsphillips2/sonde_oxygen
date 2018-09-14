@@ -11,10 +11,10 @@ source("model/stan_utility.R")
 
 # stan settings
 rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores()-2)
+options(mc.cores = parallel::detectCores()-4)
 
 # read data
-data = read_rdump("analyses/test_analysis/model_fit/input/sonde_list.R")
+data = read_rdump("analyses/full_analysis/model_fit/input/sonde_list.R")
 
 
 
@@ -46,7 +46,7 @@ priors = list(k0_prior = c(2, 1),
 as_data_frame(append(list(par = c("mean","sd")), priors)) %>%
   gather(name, value, 2:12) %>%
   spread(par, value) %>%
-  write_csv("analyses/test_analysis/model_fit/input/priors.csv")
+  write_csv("analyses/full_analysis/model_fit/input/priors.csv")
 
 # add priors to data
 data_full = data %>% append(priors)
@@ -135,6 +135,15 @@ fixed_pars %>%
 # pairs plot for parameters
 # ggpairs(fixed_pars %>% select(-chain, -step))
 
+# posterior densities
+fixed_pars %>%
+  gather(par, value, -chain, -step) %>%
+  filter(par != "lp__") %>%
+  ggplot(aes(value))+
+  facet_wrap(~par, scales="free")+
+  stat_density(alpha=0.5, geom = "line")+
+  theme_bw()
+
 
 
 
@@ -195,8 +204,8 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # export path
-output_path = "analyses/test_analysis/model_fit/output/sig_obs10"
-# output_path = "analyses/test_analysis/model_fit/output/sig_obs100"
+output_path = "analyses/full_analysis/model_fit/output/sig_obs10"
+# output_path = "analyses/full_analysis/model_fit/output/sig_obs100"
 
 # export
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
