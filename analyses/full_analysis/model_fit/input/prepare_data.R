@@ -124,7 +124,7 @@ sonde_prep3 %>%
   filter(D_M == sonde_prep3$D_M[1000])
 
 # export prepared data
-# sonde_prep %>%
+# sonde_prep2 %>%
 #   left_join(sonde_prep3 %>% select(year, month, yday, hour, T_S, D_M)) %>%
 #   write_csv("analyses/full_analysis/model_fit/input/sonde_prep.csv")
 
