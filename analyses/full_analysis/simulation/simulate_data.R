@@ -108,8 +108,8 @@ sim_fn = function(x){
 data_prep2 = data_prep %>% 
   mutate(
     fix_beta0 = T,
-    fix_alpha = T,
-    fix_rho = T,
+    fix_alpha = F,
+    fix_rho = F,
     beta0 = ifelse(fix_beta0 == T, mean(beta0, na.rm=T), beta0),
     alpha = ifelse(fix_alpha == T, mean(alpha, na.rm=T), alpha),
     rho = ifelse(fix_rho == T, mean(rho, na.rm=T), rho)
