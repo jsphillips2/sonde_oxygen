@@ -84,7 +84,7 @@ gpp_part_fun = function(y, x){
                   sd = sqrt(diag(gpp_vcv)),
                   cv = sd/mean,
                   sen = gpp_grad[,1],
-                  ela = round((mean/gpp_mean)*sen,2),
+                  ela = round((mean/abs(gpp_mean))*sen,2),
                   cont100 = gpp_cont) %>% 
     filter(sd > 0)
   return(yy)
@@ -137,7 +137,7 @@ er_part_fun = function(y, x){
                   sd = sqrt(diag(er_vcv)),
                   cv = sd/mean,
                   sen = er_grad[,1],
-                  ela = round((mean/er_mean)*sen,2),
+                  ela = round((mean/abs(er_mean))*sen,2),
                   cont100 = er_cont) %>% 
     filter(sd > 0)
   return(yy)
@@ -192,7 +192,7 @@ nep_part_fun = function(y, x){
                   sd = sqrt(diag(nep_vcv)),
                   cv = sd/mean,
                   sen = nep_grad[,1],
-                  ela = round((mean/nep_mean)*sen,2),
+                  ela = round((mean/abs(nep_mean))*sen,2),
                   cont100 = nep_cont) %>% 
     filter(sd > 0)
   return(yy)
@@ -237,7 +237,13 @@ gpp_part_sum = lapply(c(0.16,0.5,0.84), function(x){
 names(gpp_part_sum) = c("lower16","middle","upper84")
 
 # export
-# write_csv(gpp_part_sum %>% bind_rows, "main_analysis/analysis/tables/gpp_part.csv")
+# gpp_part_sum %>% 
+#   bind_rows %>% 
+#   select(param, quant, cv, ela, cont100) %>%
+#   mutate(cv = round(cv, 2),
+#          ela = round(ela, 2),
+#          cont100 = round(cont100, 2)) %>%
+#   write_csv("analyses/full_analysis/figures/gpp_part.csv")
 
 
 
@@ -278,7 +284,13 @@ er_part_sum = lapply(c(0.16,0.5,0.84), function(x){
 names(er_part_sum) = c("lower16","middle","upper84")
 
 # export
-# write_csv(er_part_sum %>% bind_rows, "main_analysis/analysis/tables/er_part.csv")
+# er_part_sum %>% 
+#   bind_rows %>% 
+#   select(param, quant, cv, ela, cont100) %>%
+#   mutate(cv = round(cv, 2),
+#          ela = round(ela, 2),
+#          cont100 = round(cont100, 2)) %>%
+#   write_csv("analyses/full_analysis/figures/er_part.csv")
 
 
 
@@ -320,7 +332,13 @@ nep_part_sum = lapply(c(0.16,0.5,0.84), function(x){
 names(nep_part_sum) = c("lower16","middle","upper84")
 
 # export
-# write_csv(nep_part_sum %>% bind_rows, "main_analysis/analysis/tables/nep_part.csv")
+# nep_part_sum %>% 
+#   bind_rows %>% 
+#   select(param, quant, cv, ela, cont100) %>%
+#   mutate(cv = round(cv, 2),
+#          ela = round(ela, 2),
+#          cont100 = round(cont100, 2)) %>%
+#   write_csv("analyses/full_analysis/figures/nep_part.csv")
 
 
 
