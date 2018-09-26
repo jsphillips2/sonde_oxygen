@@ -184,7 +184,7 @@ post_pred %>%
 # beta0 and rho full
 daily_pars = c("beta0","alpha","rho")
 daily = rstan::extract(fit, pars=daily_pars) %>% 
-{lapply(1:3, function(x){y = .[[x]] %>% as_data_frame %>%
+{lapply(1:length(daily_pars), function(x){y = .[[x]] %>% as_data_frame %>%
   mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains)) %>%
   gather(var, value, -chain, -step) %>%
   mutate(day = strsplit(var, "V") %>% map_int(~as.integer(.x[2])),
@@ -199,7 +199,9 @@ fit_clean = fit_summary %>%
   rename(lower16 = `16%`, middle = `50%`, upper84 = `84%`)  %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])),
-         day = ifelse(name %in% c("beta0","alpha","rho","GPP","ER","NEP","AIR","Flux"), index, data$D_M[index])) %>%
+         day = ifelse(name %in% c("beta0","alpha","rho","GPP","ER","NEP","AIR","Flux"), 
+                      index, 
+                      data$D_M[index])) %>%
   select(name, index, day, middle, lower16, upper84) %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
