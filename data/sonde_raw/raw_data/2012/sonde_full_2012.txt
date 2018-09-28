@@ -1,4 +1,4 @@
-﻿Date,Time,Temp,SpCond,TurbSC,LDO%,LDO,PCYV,IBatt,
+Date,Time,Temp,SpCond,TurbSC,LDO%,LDO,PCYV,IBatt,
 M/D/YYYY,HH:MM:SS,ºC,ｵS/cm,NTU,Sat,mg/l,Volts,%Left,
 ,,,,,,,,,
 6/8/2012,09:30:00,9.7,173,0,111.1,12.21,0.0071,86,
