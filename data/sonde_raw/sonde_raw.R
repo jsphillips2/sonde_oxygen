@@ -25,9 +25,9 @@ data = list.files(paste0("data/sonde_raw/raw_data/",year), full.names = T) %>%
 head(data[[1]], 20)
 
 # meta data lines
-# meta_lines = c(-2,-3) #2012
+# meta_lines = c(-2:-3) #2012
 # meta_lines = c(-2) # 2013
-# meta_lines = c(-1:-12, -14:-15) # 2015-2017
+meta_lines = c(-1:-12, -14:-15) # 2015-2018
 
 # remove metadata
 data_slim = data %>%
@@ -62,7 +62,9 @@ data_csv = data_slim %>%
   }) %>%
   bind_rows() %>%
   mutate(Date_Time = ymd_hms(paste(mdy(Date), Time))) %>%
-  select(Date_Time, Temp, SpCond, TurbSC, `LDO%`, LDO, PCYV)
+  # select(Date_Time, Temp, SpCond, TurbSC, `LDO%`, LDO, PCYV) # 2012-2013
+  select(Date_Time, Temp, SpCond, TurbSC_1, `LDO%`, LDO, PCYV) %>% #2015-2018
+  rename(TurbSC = TurbSC_1)
 
 # examine
 data_csv
@@ -75,7 +77,7 @@ data_csv %>%
   theme_bw()
 
 # export
-# write_csv(data_csv, paste0("data/sonde_raw/clean_data/sonde_clean_",year,".csv"))
+write_csv(data_csv, paste0("data/sonde_raw/clean_data/sonde_clean_",year,".csv"))
 
 
 
