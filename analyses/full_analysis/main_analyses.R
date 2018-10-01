@@ -188,8 +188,9 @@ p
 p = model_fit %>%
   filter(name %in% c("beta0","rho")) %>%
   left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
-              summarize(day = unique(D_M))) %>%
+              summarize(day = unique(unique_day))) %>%
   mutate(middle = middle/1000,
          lower16 = lower16/1000,
          upper84 = upper84/1000) %>%
@@ -219,8 +220,9 @@ p
 p = model_fit %>%
   filter(name %in% c("beta0","rho")) %>%
   left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
-              summarize(day = unique(D_M))) %>%
+              summarize(day = unique(unique_day))) %>%
   mutate(middle = middle/1000,
          lower16 = lower16/1000,
          upper84 = upper84/1000) %>%
@@ -260,8 +262,9 @@ p
 p = model_fit %>%
   filter(name %in% c("alpha")) %>%
   left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
-              summarize(day = unique(D_M))) %>%
+              summarize(day = unique(unique_day))) %>%
   mutate(middle = middle,
          lower16 = lower16,
          upper84 = upper84) %>%
@@ -293,8 +296,9 @@ p
 p = model_fit %>%
   filter(name %in% c("beta0","rho")) %>%
   left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
-              summarize(day = unique(D_M))) %>%
+              summarize(day = unique(unique_day))) %>%
   select(-lower16, -upper84) %>%
   mutate(middle = middle/1000) %>%
   spread(name, middle) %>%
@@ -341,7 +345,7 @@ p = model_fit %>%
   filter(name %in% c("GPP","ER","NEP")) %>%
   left_join(sonde_data %>%
               group_by(year, yday) %>%
-              summarize(day = unique(D_M))) %>%
+              summarize(day = unique(unique_day))) %>%
   full_join(sonde_data %>% expand(year,yday,name=c("GPP","ER","NEP"))) %>%
   mutate(middle = ifelse(name=="ER",-middle,middle)/1000,
          lower16 = ifelse(name=="ER",-lower16,lower16)/1000,
@@ -375,7 +379,7 @@ p = model_fit %>%
   filter(name %in% c("GPP","ER","NEP")) %>%
   left_join(sonde_data %>%
               group_by(year, yday) %>%
-              summarize(day = unique(D_M))) %>%
+              summarize(day = unique(unique_day))) %>%
   full_join(sonde_data %>% expand(year,yday,name=c("GPP","ER","NEP"))) %>%
   mutate(middle = ifelse(name=="ER",-middle,middle)/1000,
          lower16 = ifelse(name=="ER",-lower16,lower16)/1000,
@@ -425,7 +429,7 @@ p = model_fit %>%
   filter(name %in% c("GPP","ER","NEP")) %>%
   left_join(sonde_data %>%
               group_by(year, yday) %>%
-              summarize(day = unique(D_M))) %>%
+              summarize(day = unique(unique_day))) %>%
   select(-lower16, -upper84) %>%
   mutate(middle = middle/1000) %>%
   spread(name, middle) %>%

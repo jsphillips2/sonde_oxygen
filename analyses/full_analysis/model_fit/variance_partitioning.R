@@ -25,7 +25,7 @@ comb_data = daily %>%
   spread(name, value) %>%
   full_join(params_full) %>%
   left_join(sonde_data %>%
-              rename(day = D_M) %>%
+              rename(day = unique_day) %>%
               select(year,yday,day,hour,par,temp) %>%
               na.omit()) %>%
   select(chain,step,year,yday,hour,par,temp,beta0,alpha,rho,alpha,gamma_1,gamma_2) %>%
