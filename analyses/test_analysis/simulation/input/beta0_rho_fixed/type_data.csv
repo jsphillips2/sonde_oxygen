@@ -1,4 +1,0 @@
-var,value,name
-fix_beta0,TRUE,beta0
-fix_alpha,FALSE,alpha
-fix_rho,TRUE,rho

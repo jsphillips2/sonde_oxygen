@@ -26,12 +26,14 @@ comb_data = daily %>%
   full_join(params_full) %>%
   left_join(sonde_data %>%
               rename(day = unique_day) %>%
-              select(year,yday,day,hour,par,temp) %>%
+              select(year,yday,day,hour,par_int,temp) %>%
               na.omit()) %>%
-  select(chain,step,year,yday,hour,par,temp,beta0,alpha,rho,alpha,gamma_1,gamma_2) %>%
+  select(chain,step,year,yday,hour,par_int,temp,beta0,alpha,rho,alpha,gamma_1,gamma_2) %>%
   mutate(temp_ref = mean(temp))
 
 years = unique(sonde_data$year)
+
+
 
 
 
@@ -47,26 +49,26 @@ gpp_part_fun = function(y, x){
   
   # Vector of mean values
   gpp_par_mean = x_filt %>%
-    select(beta0, alpha, gamma_1, par_0, par_z, temp_0, temp_z, temp_ref) %>%
+    select(beta0, alpha, gamma_1, par_int_0, par_int_z, temp_0, temp_z, temp_ref) %>%
     summarise_all(mean)
   
   # Define model function
-  gpp_fun = function(beta0,alpha,gamma_1,par_0,par_z,temp_0,temp_z,temp_ref){
-    beta0*gamma_1^((temp_0 + temp_z)-temp_ref)*tanh((alpha/(beta0*gamma_1^((temp_0 + temp_z)-temp_ref)))*(par_0 + par_z))
+  gpp_fun = function(beta0,alpha,gamma_1,par_int_0,par_int_z,temp_0,temp_z,temp_ref){
+    beta0*gamma_1^((temp_0 + temp_z)-temp_ref)*tanh((alpha/(beta0*gamma_1^((temp_0 + temp_z)-temp_ref)))*(par_int_0 + par_int_z))
   }
   
   # Evaluate at mean value
   gpp_mean = gpp_par_mean %>% 
-  {gpp_fun(.$beta0,.$alpha,.$gamma_1,.$par_0,.$par_z,.$temp_0,.$temp_z,.$temp_ref)}
+  {gpp_fun(.$beta0,.$alpha,.$gamma_1,.$par_int_0,.$par_int_z,.$temp_0,.$temp_z,.$temp_ref)}
   
   # Define model gradient
-  gpp_grad_fun <-deriv(~beta0*gamma_1^((temp_0 + temp_z)-temp_ref)*tanh((alpha/(beta0*gamma_1^((temp_0 + temp_z)-temp_ref)))*(par_0 + par_z)), 
-                       c("beta0","alpha","gamma_1","par_0","par_z","temp_0","temp_z","temp_ref"), 
-                       function(beta0,alpha,gamma_1,par_0,par_z,temp_0,temp_z,temp_ref){})
-  gpp_grad = t(attributes(gpp_par_mean %>% {gpp_grad_fun(.$beta0,.$alpha,.$gamma_1,.$par_0,.$par_z,.$temp_0,.$temp_z,.$temp_ref)})$gradient)
+  gpp_grad_fun <-deriv(~beta0*gamma_1^((temp_0 + temp_z)-temp_ref)*tanh((alpha/(beta0*gamma_1^((temp_0 + temp_z)-temp_ref)))*(par_int_0 + par_int_z)), 
+                       c("beta0","alpha","gamma_1","par_int_0","par_int_z","temp_0","temp_z","temp_ref"), 
+                       function(beta0,alpha,gamma_1,par_int_0,par_int_z,temp_0,temp_z,temp_ref){})
+  gpp_grad = t(attributes(gpp_par_mean %>% {gpp_grad_fun(.$beta0,.$alpha,.$gamma_1,.$par_int_0,.$par_int_z,.$temp_0,.$temp_z,.$temp_ref)})$gradient)
   
   # Define variance-covariance matrix
-  gpp_vcv = cov(x_filt %>% select(beta0,alpha,gamma_1,par_0,par_z,temp_0,temp_z,temp_ref)) 
+  gpp_vcv = cov(x_filt %>% select(beta0,alpha,gamma_1,par_int_0,par_int_z,temp_0,temp_z,temp_ref)) 
   
   # Calcuate % contributions to variance using delta method
   gpp_mat = hadamard.prod(gpp_vcv, gpp_grad %*% t(gpp_grad))
@@ -153,28 +155,28 @@ nep_part_fun = function(y, x){
   
   # Vector of mean values
   nep_par_mean = x_filt %>%
-    select(beta0, alpha, rho, gamma_1, gamma_2, par_0, par_z, temp_0, temp_z, temp_ref) %>%
+    select(beta0, alpha, rho, gamma_1, gamma_2, par_int_0, par_int_z, temp_0, temp_z, temp_ref) %>%
     summarise_all(mean)
   
   # Define model function
-  nep_fun = function(beta0,alpha,rho,gamma_1,gamma_2,par_0,par_z,temp_0,temp_z,temp_ref){
-    beta0*gamma_1^((temp_0 + temp_z)-temp_ref)*tanh((alpha/(beta0*gamma_1^((temp_0 + temp_z)-temp_ref)))*(par_0 + par_z)) 
+  nep_fun = function(beta0,alpha,rho,gamma_1,gamma_2,par_int_0,par_int_z,temp_0,temp_z,temp_ref){
+    beta0*gamma_1^((temp_0 + temp_z)-temp_ref)*tanh((alpha/(beta0*gamma_1^((temp_0 + temp_z)-temp_ref)))*(par_int_0 + par_int_z)) 
     - rho*gamma_2^((temp_0 + temp_z)-temp_ref)
   }
   
   # Evaluate at mean value
   nep_mean = nep_par_mean %>% 
-  {nep_fun(.$beta0,.$alpha,.$rho,.$gamma_1,.$gamma_2,.$par_0,.$par_z,.$temp_0,.$temp_z,.$temp_ref)}
+  {nep_fun(.$beta0,.$alpha,.$rho,.$gamma_1,.$gamma_2,.$par_int_0,.$par_int_z,.$temp_0,.$temp_z,.$temp_ref)}
   
   # Define model gradient
-  nep_grad_fun <-deriv(~beta0*gamma_1^((temp_0 + temp_z)-temp_ref)*tanh((alpha/(beta0*gamma_1^((temp_0 + temp_z)-temp_ref)))*(par_0 + par_z)) 
+  nep_grad_fun <-deriv(~beta0*gamma_1^((temp_0 + temp_z)-temp_ref)*tanh((alpha/(beta0*gamma_1^((temp_0 + temp_z)-temp_ref)))*(par_int_0 + par_int_z)) 
                        - rho*gamma_2^((temp_0 + temp_z)-temp_ref), 
-                       c("beta0","alpha","rho","gamma_1","gamma_2","par_0","par_z","temp_0","temp_z","temp_ref"), 
-                       function(beta0,alpha,rho,gamma_1,gamma_2,par_0,par_z,temp_0,temp_z,temp_ref){})
-  nep_grad = t(attributes(nep_par_mean %>% {nep_grad_fun(.$beta0,.$alpha,.$rho,.$gamma_1,.$gamma_2,.$par_0,.$par_z,.$temp_0,.$temp_z,.$temp_ref)})$gradient)
+                       c("beta0","alpha","rho","gamma_1","gamma_2","par_int_0","par_int_z","temp_0","temp_z","temp_ref"), 
+                       function(beta0,alpha,rho,gamma_1,gamma_2,par_int_0,par_int_z,temp_0,temp_z,temp_ref){})
+  nep_grad = t(attributes(nep_par_mean %>% {nep_grad_fun(.$beta0,.$alpha,.$rho,.$gamma_1,.$gamma_2,.$par_int_0,.$par_int_z,.$temp_0,.$temp_z,.$temp_ref)})$gradient)
   
   # Define variance-covariance matrix
-  nep_vcv = cov(x_filt %>% select(beta0,alpha,rho,gamma_1,gamma_2,par_0,par_z,temp_0,temp_z,temp_ref)) 
+  nep_vcv = cov(x_filt %>% select(beta0,alpha,rho,gamma_1,gamma_2,par_int_0,par_int_z,temp_0,temp_z,temp_ref)) 
   
   # Calcuate % contributions to variance using delta method
   nep_mat = hadamard.prod(nep_vcv, nep_grad %*% t(nep_grad))
@@ -206,16 +208,16 @@ nep_part_fun = function(y, x){
 #========== GPP (pool years)
 #==========
 
-# the functions are designed for separate with vs. between day variation in par/temp
-# to collapose these into a single variable, set par_0 = par and par_z = 0, etc.
+# the functions are designed for separate with vs. between day variation in par_int/temp
+# to collapose these into a single variable, set par_int_0 = par_int and par_int_z = 0, etc.
 comb_data_trans = comb_data %>% 
   filter(chain==1) %>%
   group_by(chain, step, year, yday) %>%
-  mutate(par_0 = par,
-         par_z = par - par_0,
+  mutate(par_int_0 = par_int,
+         par_int_z = par_int - par_int_0,
          temp_0 = temp,
          temp_z = temp - temp_0) %>%
-  select(-par, -temp) %>%
+  select(-par_int, -temp) %>%
   ungroup
 
 # partition for each step 
@@ -253,16 +255,16 @@ names(gpp_part_sum) = c("lower16","middle","upper84")
 #========== ER (pool years)
 #==========
 
-# the functions are designed for separate with vs. between day variation in par/temp
-# to collapose these into a single variable, set par_0 = par and par_z = 0, etc.
+# the functions are designed for separate with vs. between day variation in par_int/temp
+# to collapose these into a single variable, set par_int_0 = par_int and par_int_z = 0, etc.
 comb_data_trans = comb_data %>% 
   filter(chain==1) %>%
   group_by(chain, step, year, yday) %>%
-  mutate(par_0 = par,
-         par_z = par - par_0,
+  mutate(par_int_0 = par_int,
+         par_int_z = par_int - par_int_0,
          temp_0 = temp,
          temp_z = temp - temp_0) %>%
-  select(-par, -temp) %>%
+  select(-par_int, -temp) %>%
   ungroup
 
 # partition for each step 
@@ -301,16 +303,16 @@ names(er_part_sum) = c("lower16","middle","upper84")
 #========== NEP (pool years)
 #==========
 
-# the functions are designed for separate with vs. between day variation in par/temp
-# to collapose these into a single variable, set par_0 = par and par_z = 0, etc.
+# the functions are designed for separate with vs. between day variation in par_int/temp
+# to collapose these into a single variable, set par_int_0 = par_int and par_int_z = 0, etc.
 comb_data_trans = comb_data %>% 
   filter(chain==1) %>%
   group_by(chain, step, year, yday) %>%
-  mutate(par_0 = par,
-         par_z = par - par_0,
+  mutate(par_int_0 = par_int,
+         par_int_z = par_int - par_int_0,
          temp_0 = temp,
          temp_z = temp - temp_0) %>%
-  select(-par, -temp) %>%
+  select(-par_int, -temp) %>%
   ungroup
 
 # partition for each step 

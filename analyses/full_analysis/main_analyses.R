@@ -344,6 +344,7 @@ model_fit %>%
 p = model_fit %>%
   filter(name %in% c("GPP","ER","NEP")) %>%
   left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
               summarize(day = unique(unique_day))) %>%
   full_join(sonde_data %>% expand(year,yday,name=c("GPP","ER","NEP"))) %>%
