@@ -16,6 +16,26 @@ sonde = read_csv("data/sonde_final.csv") %>%
   # convert hour from 0:23 to 1:24 (this makes indexing easier later)
   mutate(hour = hour + 1) 
 
+# examine
+sonde %>%
+  mutate(time = yday + hour/24) %>%
+  {ggplot(.,aes(time, do))+
+      facet_wrap(~year)+
+      geom_line(data = . %>% filter(is.na(do)==F), size = 0.3)+
+      geom_point(size = 0.5)+
+      theme_bw()}
+
+# omit final days of 2015 due to large gap
+sonde %>%
+  filter(year == 2015, yday < 190 & yday > 180) %>%
+  mutate(time = yday + hour/24) %>%
+  {ggplot(.,aes(time, do))+
+      geom_line(data = . %>% filter(is.na(do)==F), size = 0.3)+
+      geom_point(size = 0.5)+
+      theme_bw()}
+
+sonde_2 = sonde %>% 
+  filter(!(year == 2015 & yday > 185))
 
 
 
@@ -25,7 +45,8 @@ sonde = read_csv("data/sonde_final.csv") %>%
 #==========
 
 # prepare data
-sonde_prep = sonde %>%
+sonde_prep = sonde_2 %>%
+  arrange(year, yday, hour) %>%
   # for each year, create identifier for uninterrupted stretches of observations
   group_by(year) %>%
   mutate(i = ifelse(is.na(do)==T, 1, 0), 
@@ -33,16 +54,25 @@ sonde_prep = sonde %>%
   filter(is.na(do)==F, is.na(wspeed)==F) %>%
   mutate(series = cumsum(j)) %>% 
   ungroup() %>%
-  # create unique indeces for each series and day across years
+  # create unique index for each series
+  # remove series with fewer than 10 observations
+  mutate(unique_series = year + series/length(unique(series))) %>%
+  group_by(unique_series) %>%
+  mutate(series_length = length(unique_series)) %>%
+  filter(series_length > 9) %>%
+  ungroup() %>%
+  # recreate series index and make unique index for days
+  # create index for observations (for joining later)
   # replace 0 par_int with smallest non-zero value
-  mutate(unique_series = paste(year, series) %>% as.factor() %>% as.numeric(),
+  mutate(unique_series = as.factor(unique_series) %>% as.numeric(),
          unique_day = paste(year, yday) %>% as.factor() %>% as.numeric(),
+         index = 1:length(do),
          par_int = ifelse(par_int==0, min(par[which(par_int>0)]), par_int)
          ) %>%
   select(-i, -j) 
 
 # return missing observations for check
-sonde_check = sonde %>% 
+sonde_check = sonde_2 %>% 
   expand(year,yday,hour) %>%
   full_join(sonde_prep) %>%
   arrange(year,yday)
