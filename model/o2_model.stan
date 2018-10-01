@@ -6,8 +6,9 @@ data {
   int n_days; // number of days
   int n_series; // number of time series
   int map_days[n_obs]; // mapping of observations to days
-  int days_per[n_years]; // number of days in each year
-  int obs_per[n_series]; // number of steps in each time series
+  int days_per_year[n_years]; // number of days in each year
+  int obs_per_series[n_series]; // number of obervsations in each time series
+  int obs_per_day[n_days]; // number of observations in each day
   // actual data
   real<lower=0> o2_obs[n_obs]; // observed oxygen [g m^-3]
   real<lower=0> o2_eq[n_obs]; // equilibrium oxygen [g m^-3] 
@@ -72,15 +73,15 @@ transformed parameters {
       log_alpha[pos] = log_alpha_init[y];
       log_rho[pos] = log_rho_init[y];
       // random walk
-      for (d in (pos+1):(pos+days_per[y]-1)){
+      for (d in (pos+1):(pos+days_per_year[y]-1)){
         log_beta0[d] = log_beta0[d-1] + sig_beta0*z_beta0[d - y];
         log_alpha[d] = log_alpha[d-1] + sig_alpha*z_alpha[d - y];
         log_rho[d] = log_rho[d-1] + sig_rho*z_rho[d - y]; 
       }
-      pos = pos + days_per[y];
+      pos = pos + days_per_year[y];
     }
   }
-  // exp parameters
+  // exponentiate parameters
   beta0 = exp(log_beta0); 
   alpha = exp(log_alpha);
   rho = exp(log_rho);
@@ -119,33 +120,32 @@ model {
     int pos = 1; 
     for (t in 1:n_series) {
       o2[pos] ~ normal(o2_obs[pos], sig_obs);
-      o2[(pos+1):(pos+obs_per[t]-1)] 
-        ~ normal(o2_pred[pos:(pos+obs_per[t]-2)], sig_proc);
-      pos = pos + obs_per[t];
+      o2[(pos+1):(pos+obs_per_series[t]-1)] 
+        ~ normal(o2_pred[pos:(pos+obs_per_series[t]-2)], sig_proc);
+      pos = pos + obs_per_series[t];
     }
   }
   // observation process
   o2_obs ~ normal(o2, sig_obs);
 }
 generated quantities{
-  real[n_days] GPP; // total daily flux
-  real[n_days] ER; // total daily flux
-  real[n_days] NEP; // total daily flux
-  real[n_days] AIR; // total daily flux
-  real[n_days] Flux; // total daily flux
+  real GPP[n_days]; // total daily flux
+  real ER[n_days]; // total daily flux
+  real NEP[n_days]; // total daily flux
+  real AIR[n_days]; // total daily flux
+  real Flux[n_days]; // total daily flux
   real GPP_mean; // overall mean flux
   real ER_mean; // overall mean flux
   real NEP_mean; // overall mean flux
   {
     int pos = 1;
     for (d in 1:n_days){
-      int pos_max = sum(map_days == d);
-      GPP[d] = 24*mean(gpp[pos:pos_max]);
-      ER[d] = 24*mean(er[pos:pos_max]);
-      NEP[d] = 24*mean(nep[pos:pos_max]);
-      AIR[d] = 24*mean(air[pos:pos_max]);
+      GPP[d] = 24*mean(gpp[pos:(pos + obs_per_day[d] - 1)]);
+      ER[d] = 24*mean(er[pos:(pos + obs_per_day[d] - 1)]);
+      NEP[d] = 24*mean(nep[pos:(pos + obs_per_day[d] - 1)]);
+      AIR[d] = 24*mean(air[pos:(pos + obs_per_day[d] - 1)]);
       Flux[d] = (NEP[d] + AIR[d])/z;
-      pos = pos + pos_max; // advance position counter
+      pos = pos + obs_per_day[d]; // advance position counter
   }
   // mean daily fluxes
     GPP_mean = mean(GPP);
