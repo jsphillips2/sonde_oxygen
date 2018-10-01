@@ -1,38 +1,36 @@
 data {
   // declare variables
   // indices
-  int N; // number of observations
-  int Y; // number of years
-  int D; // number of days
-  int T_S; // number of time series
-  int D_M[N]; // mapping of observations to days
-  int K[Y+1]; // number of days in each year
-  int S[T_S+1]; // number of steps in each time series
-  int o2_st[T_S+1]; // starting positions for each time series
-  int dy_st[Y+1]; // starting positions for each day
+  int n_obs; // number of observations
+  int n_years; // number of years
+  int n_days; // number of days
+  int n_series; // number of time series
+  int map_days[n_obs]; // mapping of observations to days
+  int days_per[n_years]; // number of days in each year
+  int obs_per[n_series]; // number of steps in each time series
   // actual data
-  vector<lower=0>[N] o2_obs; // observed oxygen [g m^-3]
-  vector<lower=0>[N] o2_eq; // equilibrium oxygen [g m^-3] 
-  vector<lower=0>[N] light; // light [umol-photons m^-2 s^-1]
-  vector<lower=0>[N] temp; // temperature [C]
-  vector<lower=0>[N] wspeed; // wind speeed [m s^-1]
-  vector<lower=0>[N] sch_conv; // Schmidt number conversion
+  real<lower=0> o2_obs[n_obs]; // observed oxygen [g m^-3]
+  real<lower=0> o2_eq[n_obs]; // equilibrium oxygen [g m^-3] 
+  real<lower=0> light[n_obs]; // light [umol-photons m^-2 s^-1]
+  real<lower=0> temp[n_obs]; // temperature [C]
+  real<lower=0> wspeed[n_obs]; // wind speeed [m s^-1]
+  real<lower=0> sch_conv[n_obs]; // Schmidt number conversion
   real<lower=0> z; // mixing depth [m]
   real<lower=0> temp_ref; // reference temperature [C]
   real<lower=0> k2; // gas exhange constant 2
   real<lower=0> sig_obs; // observation error sd [g m^-3]
   // priors
-  vector[2] k0_prior;
-  vector[2] k1_prior;
-  vector[2] gamma_1_prior;
-  vector[2] gamma_2_prior;
-  vector[2] sig_beta0_prior;
-  vector[2] sig_alpha_prior;
-  vector[2] sig_rho_prior;
-  vector[2] sig_proc_prior;
-  vector[2] log_beta0_prior;
-  vector[2] log_alpha_prior;
-  vector[2] log_rho_prior;
+  real k0_prior[2];
+  real k1_prior[2];
+  real gamma_1_prior[2];
+  real gamma_2_prior[2];
+  real sig_beta0_prior[2];
+  real sig_alpha_prior[2];
+  real sig_rho_prior[2];
+  real sig_proc_prior[2];
+  real log_beta0_prior[2];
+  real log_alpha_prior[2];
+  real log_rho_prior[2];
 }
 parameters{
   real<lower=0> k0; // gas exchange constant 0
@@ -43,39 +41,43 @@ parameters{
   real<lower=0> sig_alpha; // sd of log_rho random walk 
   real<lower=0> sig_rho; // sd of log_rho random walk 
   real<lower=0> sig_proc; // sd of oxygen state process error
-  vector[N] o2; // inferred oxygen state [g m^-3]
-  vector[Y+1] log_beta0_init; // initial value for log_beta0
-  vector[Y+1] log_alpha_init; // initial value for log_beta0
-  vector[Y+1] log_rho_init; // initial value for log_rho
-  vector[D] z_beta0; // z value for non-centered parameterization
-  vector[D] z_alpha; // z value for non-centered parameterization
-  vector[D] z_rho; // z value for non-centered parameterization
+  real o2[n_obs]; // inferred oxygen state [g m^-3]
+  real log_beta0_init[n_years]; // initial value for log_beta0
+  real log_alpha_init[n_years]; // initial value for log_beta0
+  real log_rho_init[n_years]; // initial value for log_rho
+  real z_beta0[n_days-n_years]; // z value for non-centered parameterization
+  real z_alpha[n_days-n_years]; // z value for non-centered parameterization
+  real z_rho[n_days-n_years]; // z value for non-centered parameterization
 }
 transformed parameters {
   // declare variables
-  vector[D] log_beta0; // max gpp at temp_ref (log scale)
-  vector[D] log_alpha; // max gpp at temp_ref (log scale)
-  vector[D] log_rho; // er at temp_ref (log scale)
-  vector<lower=0>[D] beta0; // max gpp at temp_ref [g m^-2 h^-1]
-  vector<lower=0>[D] alpha; // max gpp at temp_ref [g m^-2 h^-1]
-  vector<lower=0>[D] rho; // er at temp_ref [g m^-2 h^-1]
-  vector<lower=0>[N] beta; // max gpp at high light [g m^-2 h^-1]
-  vector<lower=0>[N] gpp; // gpp [g m^-2 h^-1]
-  vector<lower=0>[N] er; // er [g m^-2 h^-1]
-  vector[N] nep; // nep [g m^-2 h^-1]
-  vector[N] air; // oxygen exchange with atmosphere [g m^-2 h^-1]
-  vector[N] o2_pred; // predicted oxygen [g m^-3]
+  real log_beta0[n_days]; // max gpp at temp_ref (log scale)
+  real log_alpha[n_days]; // max gpp at temp_ref (log scale)
+  real log_rho[n_days]; // er at temp_ref (log scale)
+  real beta0[n_days]; // max gpp at temp_ref [g m^-2 h^-1]
+  real alpha[n_days]; // max gpp at temp_ref [g m^-2 h^-1]
+  real rho[n_days]; // er at temp_ref [g m^-2 h^-1]
+  real beta[n_obs]; // max gpp at high light [g m^-2 h^-1]
+  real gpp[n_obs]; // gpp [g m^-2 h^-1]
+  real er[n_obs]; // er [g m^-2 h^-1]
+  real nep[n_obs]; // nep [g m^-2 h^-1]
+  real air[n_obs]; // oxygen exchange with atmosphere [g m^-2 h^-1]
+  real o2_pred[n_obs]; // predicted oxygen [g m^-3]
   // daily parameters
-  for (y in 1:Y) {
-    // inital value
-    log_beta0[dy_st[y]] = log_beta0_init[y];
-    log_alpha[dy_st[y]] = log_alpha_init[y];
-    log_rho[dy_st[y]] = log_rho_init[y];
-    // random walk
-    for (d in (dy_st[y]+1):(dy_st[y]+K[y]-1)){
-      log_beta0[d] = log_beta0[d-1] + sig_beta0*z_beta0[d-1];
-      log_alpha[d] = log_alpha[d-1] + sig_alpha*z_alpha[d-1];
-      log_rho[d] = log_rho[d-1] + sig_rho*z_rho[d-1]; 
+  {
+    int pos = 1;
+    for (y in 1:n_years) {
+      // inital value
+      log_beta0[pos] = log_beta0_init[y];
+      log_alpha[pos] = log_alpha_init[y];
+      log_rho[pos] = log_rho_init[y];
+      // random walk
+      for (d in (pos+1):(pos+days_per[y]-1)){
+        log_beta0[d] = log_beta0[d-1] + sig_beta0*z_beta0[d - y];
+        log_alpha[d] = log_alpha[d-1] + sig_alpha*z_alpha[d - y];
+        log_rho[d] = log_rho[d-1] + sig_rho*z_rho[d - y]; 
+      }
+      pos = pos + days_per[y];
     }
   }
   // exp parameters
@@ -83,10 +85,10 @@ transformed parameters {
   alpha = exp(log_alpha);
   rho = exp(log_rho);
   // predicted oxygen 
-  for (n in 1:N) {
-    beta[n] = beta0[D_M[n]]*gamma_1^(temp[n] - temp_ref);
-    gpp[n] = beta[n]*tanh((alpha[D_M[n]]/beta[n])*light[n]);
-    er[n] = rho[D_M[n]]*gamma_2^(temp[n] - temp_ref);
+  for (n in 1:n_obs) {
+    beta[n] = beta0[map_days[n]]*gamma_1^(temp[n] - temp_ref);
+    gpp[n] = beta[n]*tanh((alpha[map_days[n]]/beta[n])*light[n]);
+    er[n] = rho[map_days[n]]*gamma_2^(temp[n] - temp_ref);
     nep[n] = gpp[n] - er[n];
     air[n] = ((k0 + k1*wspeed[n]^k2)/100)*sch_conv[n]*(o2_eq[n] - o2[n]);
     o2_pred[n] = o2[n] + (nep[n] + air[n])/z;
@@ -103,7 +105,7 @@ model {
   sig_rho ~ normal(sig_rho_prior[1], sig_rho_prior[2]) T[0, ]; 
   sig_proc ~ normal(sig_proc_prior[1], sig_proc_prior[2]) T[0, ]; 
   // initial values
-  for(y in 1:Y){
+  for(y in 1:n_years){
     log_beta0_init[y] ~ normal(log_beta0_prior[1], log_beta0_prior[2]); 
     log_alpha_init[y] ~ normal(log_alpha_prior[1], log_alpha_prior[2]); 
     log_rho_init[y] ~ normal(log_rho_prior[1], log_rho_prior[2]); 
@@ -113,77 +115,41 @@ model {
   z_alpha ~ normal(0, 1);
   z_rho ~ normal(0, 1);
   // state process
-  for (t in 1:T_S) {
-    o2[o2_st[t]] ~ normal(o2_obs[o2_st[t]], sig_obs);
-    o2[(o2_st[t]+1):(o2_st[t]+S[t]-1)] 
-      ~ normal(o2_pred[o2_st[t]:(o2_st[t]+S[t]-2)], sig_proc);
+  {
+    int pos = 1; 
+    for (t in 1:n_series) {
+      o2[pos] ~ normal(o2_obs[pos], sig_obs);
+      o2[(pos+1):(pos+obs_per[t]-1)] 
+        ~ normal(o2_pred[pos:(pos+obs_per[t]-2)], sig_proc);
+      pos = pos + obs_per[t];
+    }
   }
   // observation process
   o2_obs ~ normal(o2, sig_obs);
 }
 generated quantities{
-  // declare variables
-  vector[N] error_proc_real;
-  vector[N] error_proc_sim;
-  vector[N] error_obs_real;
-  vector[N] error_obs_sim;
-  vector[N] sq_error_proc_real;
-  vector[N] sq_error_proc_sim;
-  vector[N] sq_error_obs_real;
-  vector[N] sq_error_obs_sim;
-  real chi_proc_real;
-  real chi_proc_sim;
-  real chi_obs_real;
-  real chi_obs_sim;
-  int pos;
-  vector[D] GPP; // total daily flux
-  vector[D] ER; // total daily flux
-  vector[D] NEP; // total daily flux
-  vector[D] AIR; // total daily flux
-  vector[D] Flux; // total daily flux
+  real[n_days] GPP; // total daily flux
+  real[n_days] ER; // total daily flux
+  real[n_days] NEP; // total daily flux
+  real[n_days] AIR; // total daily flux
+  real[n_days] Flux; // total daily flux
   real GPP_mean; // overall mean flux
   real ER_mean; // overall mean flux
   real NEP_mean; // overall mean flux
-  for (t in 1:T_S){
-    // set initial values to 0 (they don't make sense to calculate)
-    error_proc_real[o2_st[t]] = 0;
-    error_proc_sim[o2_st[t]] = 0;
-    error_obs_real[o2_st[t]] = 0;
-    error_obs_sim[o2_st[t]] = 0;
-    sq_error_proc_real[o2_st[t]] = 0;
-    sq_error_proc_sim[o2_st[t]] = 0;
-    sq_error_obs_real[o2_st[t]] = 0;
-    sq_error_obs_sim[o2_st[t]] = 0;
-    for (n in (o2_st[t]+1):(o2_st[t]+S[t]-1)){
-      // errors 
-      error_proc_real[n] = o2[n] - o2_pred[n-1];
-      error_proc_sim[n] = normal_rng(o2_pred[n-1], sig_proc) - o2_pred[n-1];
-      error_obs_real[n] = o2_obs[n] - o2[n];
-      error_obs_sim[n] = normal_rng(o2[n], sig_obs) - o2[n];
-      // squared errors
-      sq_error_proc_real[n] = error_proc_real[n]^2;
-      sq_error_proc_sim[n] = error_proc_sim[n]^2;
-      sq_error_obs_real[n] = error_obs_real[n]^2;
-      sq_error_obs_sim[n] = error_obs_sim[n]^2;
-    }
-  }
-  // chi-squared goodness-of-fit
-  chi_proc_real = sum(sq_error_proc_real/(sig_proc^2));
-  chi_proc_sim = sum(sq_error_proc_sim/(sig_proc^2));
-  chi_obs_real = sum(sq_error_obs_real/(sig_obs^2));
-  chi_obs_sim = sum(sq_error_obs_sim/(sig_obs^2));
-  // daily fluxes
-  pos = 1;
-  for (d in 1:D){
-    GPP[d] = sum(gpp[pos:(pos+23)]);
-    ER[d] = sum(er[pos:(pos+23)]);
-    NEP[d] = sum(nep[pos:(pos+23)]);
-    AIR[d] = sum(air[pos:(pos+23)]);
-    Flux[d] = (NEP[d] + AIR[d])/z;
-    pos = pos + 24; // advance position counter
+  {
+    int pos = 1;
+    for (d in 1:n_days){
+      int pos_max = sum(map_days == d);
+      GPP[d] = 24*mean(gpp[pos:pos_max]);
+      ER[d] = 24*mean(er[pos:pos_max]);
+      NEP[d] = 24*mean(nep[pos:pos_max]);
+      AIR[d] = 24*mean(air[pos:pos_max]);
+      Flux[d] = (NEP[d] + AIR[d])/z;
+      pos = pos + pos_max; // advance position counter
   }
   // mean daily fluxes
-  GPP_mean = mean(GPP);
-  ER_mean = mean(ER);
-  NEP_mean = mean(NEP);
+    GPP_mean = mean(GPP);
+    ER_mean = mean(ER);
+    NEP_mean = mean(NEP);  
+  }
 }
