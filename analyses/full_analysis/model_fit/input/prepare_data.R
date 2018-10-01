@@ -115,12 +115,15 @@ temp = sonde_prep$temp
 wspeed = sonde_prep$wspeed
 sch_conv = sonde_prep$sch_conv
 map_days = sonde_prep$unique_day
-obs_per = c({sonde_prep %>%
-    group_by(unique_series) %>%
-    summarize(value = length(unique_series))}$value) 
-days_per = c({sonde_prep %>%
+days_per_year = c({sonde_prep %>%
     group_by(year) %>%
     summarize(value = length(unique(unique_day)))}$value)
+obs_per_series = c({sonde_prep %>%
+    group_by(unique_series) %>%
+    summarize(value = length(unique_series))}$value) 
+obs_per_day = c({sonde_prep %>%
+    group_by(unique_day) %>%
+    summarize(value = length(unique_day))}$value) 
 z = 3.3
 k2 = 1.7
 n_obs = length(o2_obs)
@@ -129,8 +132,8 @@ n_days = sum(days_per)
 n_years = length(days_per)
 
 # export as .R
-# stan_rdump(c("o2_obs","o2_eq","light","temp","wspeed","sch_conv","map_days","obs_per","days_per",
-#              "z","k2","n_obs","n_series","n_days","n_years"),
+# stan_rdump(c("o2_obs","o2_eq","light","temp","wspeed","sch_conv","map_days","obs_per_series","days_per_year",
+#              "obs_per_day", "z","k2","n_obs","n_series","n_days","n_years"),
 #            file="analyses/full_analysis/model_fit/input/sonde_list.R")
 
 
