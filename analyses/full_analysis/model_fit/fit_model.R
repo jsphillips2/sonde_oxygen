@@ -27,8 +27,8 @@ data = read_rdump("analyses/full_analysis/model_fit/input/sonde_list.R")
 # priors
 priors = list(k0_prior = c(2, 1),
               k1_prior = c(0.2, 0.1),
-              gamma_1_prior = c(1.1, 1),
-              gamma_2_prior = c(1.1, 1),
+              gamma_1_prior = c(1, 1),
+              gamma_2_prior = c(1, 1),
               sig_beta0_prior = c(0, 1),
               sig_alpha_prior = c(0, 1),
               sig_rho_prior = c(0, 1),
@@ -44,7 +44,7 @@ priors = list(k0_prior = c(2, 1),
 
 # export priors
 as_data_frame(append(list(par = c("mean","sd")), priors)) %>%
-  gather(name, value, 2:12) %>%
+  gather(name, value, 2:(length(priors) + 1)) %>%
   spread(par, value) %>%
   write_csv("analyses/full_analysis/model_fit/input/priors.csv")
 
@@ -61,11 +61,11 @@ init_fn = function(){
        sig_alpha = runif(n = 1, min = 0, max = 0.2),
        sig_rho = runif(n = 1, min = 0, max = 0.2),
        sig_proc = runif(n = 1, min = 50, max = 150),
-       log_beta0_init = runif(n = data$Y + 1, min = log(0.1) + 5, 
+       log_beta0_init = runif(n = data$n_years, min = log(0.1) + 5, 
                            max = log(1.9) + 5),
-       log_alpha_init = runif(n = data$Y + 1, min = log(0.1) + 2, 
+       log_alpha_init = runif(n = data$n_years, min = log(0.1) + 2, 
                            max = log(1.9) + 2),
-       log_rho_init = runif(n = data$Y + 1, min = log(0.1) + 5, 
+       log_rho_init = runif(n = data$n_years, min = log(0.1) + 5, 
                          max = log(1.9) + 5)
   )
 }
@@ -73,6 +73,11 @@ init_fn = function(){
 # set observation error 
 data_full$sig_obs = 10
 # data_full$sig_obs = 100
+
+# set reference temperature
+# data_full$temp %>% mean()
+data_full$temp_ref = 12
+
 
 
 
@@ -82,10 +87,10 @@ data_full$sig_obs = 10
 #==========
 
 # initial specifications
-model = "o2_model"
+model = "o2_model2"
 model_path = paste0("model/",model,".stan")
-chains = 4
-iter = 2000
+chains = 1
+iter = 1000
 
 # fit model
 fit = stan(file = model_path, data = data_full, seed=1, chains = chains,
@@ -99,8 +104,8 @@ fit_summary = summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>%
 # check Rhat & n_eff
 # note that initial values beta0, alpha, and rho sample for an extra year
 # these extra values do not contribute to the likelihood
-fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var)
-fit_summary %>% filter(n_eff < 0.5*(iter/2)) %>% select(Rhat, n_eff, var)
+fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var) %>% arrange(n_eff)
+fit_summary %>% filter(n_eff < 0.5*(iter/2)) %>% select(Rhat, n_eff, var) %>% arrange(n_eff)
 
 # additional diagnostics
 check_div(fit)
@@ -144,35 +149,6 @@ fixed_pars %>%
   stat_density(alpha=0.5, geom = "line")+
   theme_bw()
 
-
-
-
-
-#==========
-#========== Poterior Predictive Check
-#==========
-
-# extract relevant variables
-post_pred_v = c("chi_proc_real","chi_proc_sim","chi_obs_real","chi_obs_sim")
-post_pred = rstan::extract(fit, pars=post_pred_v) %>%
-  lapply(as_data_frame) %>%
-  bind_cols() %>%
-  mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains))
-names(post_pred) = c(post_pred_v,"chain","step")
-
-# process error
-post_pred %>%
-  ggplot(aes(chi_proc_real,chi_proc_sim))+
-  geom_point()+
-  geom_abline(intercept=0, slope=1)+
-  theme_bw()
-
-# observation error
-post_pred %>%
-  ggplot(aes(chi_obs_real,chi_obs_sim))+
-  geom_point()+
-  geom_abline(intercept=0, slope=1)+
-  theme_bw()
   
 
 
@@ -201,7 +177,7 @@ fit_clean = fit_summary %>%
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])),
          day = ifelse(name %in% c("beta0","alpha","rho","GPP","ER","NEP","AIR","Flux"), 
                       index, 
-                      data$D_M[index])) %>%
+                      data$map_days[index])) %>%
   select(name, index, day, middle, lower16, upper84) %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
@@ -211,7 +187,6 @@ output_path = "analyses/full_analysis/model_fit/output/sig_obs10"
 
 # export
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
-# write_csv(post_pred, paste0(output_path,"/post_pred_full.csv"))
 # write_csv(daily, paste0(output_path,"/daily_full.csv"))
 # write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
 
