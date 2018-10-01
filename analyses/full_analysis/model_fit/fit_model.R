@@ -87,10 +87,10 @@ data_full$temp_ref = 12
 #==========
 
 # initial specifications
-model = "o2_model2"
+model = "o2_model"
 model_path = paste0("model/",model,".stan")
-chains = 1
-iter = 1000
+chains = 4
+iter = 2000
 
 # fit model
 fit = stan(file = model_path, data = data_full, seed=1, chains = chains,
@@ -102,9 +102,7 @@ fit_summary = summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>%
     mutate(var = rownames(summary(fit)$summary))}
 
 # check Rhat & n_eff
-# note that initial values beta0, alpha, and rho sample for an extra year
-# these extra values do not contribute to the likelihood
-fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var) %>% arrange(n_eff)
+fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var) %>% arrange(-Rhat)
 fit_summary %>% filter(n_eff < 0.5*(iter/2)) %>% select(Rhat, n_eff, var) %>% arrange(n_eff)
 
 # additional diagnostics
@@ -138,7 +136,7 @@ fixed_pars %>%
   theme_bw()
 
 # pairs plot for parameters
-# ggpairs(fixed_pars %>% select(-chain, -step))
+ggpairs(fixed_pars %>% select(-chain, -step))
 
 # posterior densities
 fixed_pars %>%
@@ -186,9 +184,9 @@ output_path = "analyses/full_analysis/model_fit/output/sig_obs10"
 # output_path = "analyses/full_analysis/model_fit/output/sig_obs100"
 
 # export
-# write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
-# write_csv(daily, paste0(output_path,"/daily_full.csv"))
-# write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
+write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
+write_csv(daily, paste0(output_path,"/daily_full.csv"))
+write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
 
 
 
