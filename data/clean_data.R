@@ -223,18 +223,19 @@ hobo_weather = hobo_weather %>%
 sonde_full = sonde_hourly %>%
   select(year, yday, hour, temp, turb, pcyv, o2_sat, do) %>%
   left_join(hobo_weather %>%
-               select(year, yday, hour, par)) %>%
+               select(year, yday, hour, par, wspeed)) %>%
   full_join(sonde_hourly %>% 
               expand(year, yday, hour)) %>%
   arrange(year, yday, hour)
 
 # plot
 sonde_full %>%
-{ggplot(.,aes(yday, do))+
-    facet_wrap(~year)+
-    geom_line(data = . %>% filter(is.na(do)==F), size = 0.3)+
-    geom_point(size = 0.5)+
-    theme_bw()}
+  mutate(time = yday + hour/24) %>%
+  {ggplot(.,aes(time, do))+
+      facet_wrap(~year)+
+      geom_line(data = . %>% filter(is.na(do)==F), size = 0.3)+
+      geom_point(size = 0.5)+
+      theme_bw()}
 
 
 
