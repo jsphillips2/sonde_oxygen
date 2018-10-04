@@ -4,6 +4,7 @@
 
 # load packages
 library(tidyverse)
+library(lubridate)
 library(truncnorm)
 library(nlme)
 
@@ -41,6 +42,8 @@ params_full = read_csv(paste0(main_path,
 model_fit = read_csv(paste0(main_path,
                             "output/sig_obs10/summary_clean.csv"))
 
+# midges
+midges = read_csv("data/midges.csv")
 
 # simulation anlaysis
 # types = c("_fixed","beta0_alpha_rho_fixed")
@@ -92,8 +95,8 @@ test = model_fit %>%
                                     temp = 12)
   }) %>%
   bind_rows %>%
-  mutate(nep = beta0*tanh(alpha*light/beta0) - rho) %>%
-  filter(index %in% sample(x= min(test$index):max(test$index), size = 20))
+  mutate(nep = beta0*tanh(alpha*light/beta0) - rho) 
+test = test %>% filter(index %in% sample(x= min(test$index):max(test$index), size = 20))
 
 test2 = test %>%
   summarize(beta0 = median(beta0),
@@ -127,7 +130,7 @@ p = test  %>%
 # examine & export
 p
 # ggsave("analyses/full_analysis/figures/fig_1.pdf", p, dpi = 300,
-#        height = 4, width = 3, units = "in")
+#        height = 4, width = 5, units = "in")
 
 
 
@@ -530,7 +533,7 @@ p = beta0_phyc %>%
   group_by(var) %>%
   mutate(val = (val - mean(val, na.rm=T))/sd(val, na.rm=T)) %>%
   ungroup() %>%
-  mutate(var = factor(var, levels=c("beta0","pcyv"), labels=c("Max GPP", "Phycoyanin"))) %>%
+  mutate(var = factor(var, levels=c("beta0","pcyv"), labels=c("Max GPP", "Phycocyanin"))) %>%
   ggplot(aes(yday, val, color = var))+
   facet_wrap(~year)+
   geom_line()+
@@ -552,7 +555,7 @@ p = beta0_phyc %>%
   group_by(var) %>%
   mutate(val = (val - mean(val, na.rm=T))/sd(val, na.rm=T)) %>%
   ungroup() %>%
-  mutate(var = factor(var, levels=c("beta0","pcyv"), labels=c("Max GPP", "Phycoyanin"))) %>%
+  mutate(var = factor(var, levels=c("beta0","pcyv"), labels=c("Max GPP", "Phycocyanin"))) %>%
   ggplot(aes(yday, val, linetype = var))+
   facet_wrap(~year)+
   geom_line()+
@@ -567,8 +570,62 @@ p
 # ggsave("analyses/full_analysis/figures/fig_8_gray.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
-# fit AR model
-m = gls(log(beta0) ~ log(pcyv), correlation = corCAR1(form = ~ yday|year), data = beta0_phyc)
+
+
+
+
+#==========
+#========== beta0, phycocyanin, and midges
+#==========
+
+# prepare beta0 and phycocyanin data
+beta0_phyc = model_fit %>%
+  filter(name %in% c("beta0")) %>%
+  left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
+              filter(pcyv < 0.3) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day),
+                        pcyv = mean(pcyv))) %>%
+  select(year, yday, middle, pcyv) %>%
+  rename(beta0 = middle) 
+
+# prepare midge data
+midges_summary = midges %>%
+              filter(sta %in% c(3, 33)) %>%
+              mutate(year = year(sampledate),
+                     yday = yday(sampledate)) %>%
+              group_by(year, yday, coreid) %>%
+              summarize(tanyt = sum(tanyt/fract_count),
+                        chiro = sum(chiro/fract_count),
+                        midges = tanyt + chiro) %>%
+              group_by(year, yday) %>%
+              summarize(tanyt = mean(tanyt, na.rm=T),
+                            chiro = mean(chiro, na.rm=T),
+                            midges = mean(midges, na.rm=T))
+
+# combine 
+beta0_phyc_midge = beta0_phyc %>%
+  left_join(midges_summary) %>%
+  na.omit()
+
+# plot
+beta0_phyc_midge %>%
+  gather(var, val, beta0, pcyv, midges) %>%
+  group_by(var) %>%
+  mutate(val = (val - mean(val, na.rm=T))/sd(val, na.rm=T)) %>%
+  ungroup() %>%
+  mutate(var = factor(var, levels=c("beta0","pcyv","midges"), labels=c("Max GPP", "Phycocyanin", "Midges"))) %>%
+  ggplot(aes(yday, val, color = var))+
+  facet_wrap(~year)+
+  geom_line()+
+  scale_color_manual("",values = c("black","cyan4","magenta4"))+
+  scale_y_continuous("Z-Score (dimensionless)", breaks = NULL)+
+  scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
+  theme_base+
+  theme(legend.position = c(0.14, 0.88))
+
+m = gls(log(beta0) ~ pcyv + midges, correlation = corCAR1(form = ~ yday|year), data = beta0_phyc_midge)
 summary(m)
 
 
