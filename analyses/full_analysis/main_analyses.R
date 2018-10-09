@@ -46,7 +46,12 @@ model_fit = read_csv(paste0(main_path,
 midges = read_csv("data/midges.csv")
 
 # simulation anlaysis
-# types = c("_fixed","beta0_alpha_rho_fixed")
+sim_params = read_csv(paste0(main_path, "output/sig_obs10/fixed_pars_full.csv")) %>%
+  mutate(type = "not fixed") %>%
+  bind_rows(read_csv(paste0(sim_path, "output/beta0_alpha_rho_fixed/fixed_pars_full.csv")) %>%
+              mutate(type = "fixed"))
+
+# types = c("beta0_alpha_rho_fixed")
 # sim_params = lapply(types, function(x){
 #   read_csv(paste0(sim_path, "output/", x, "/fixed_pars_full.csv")) %>%
 #     cbind(read_csv(paste0(sim_path, "input/", x, "/type_data.csv")) %>%
@@ -55,7 +60,12 @@ midges = read_csv("data/midges.csv")
 #     tbl_df %>%
 #     mutate(type = x)
 # }) %>%
-#   bind_rows
+#   read_csv(paste0(main_path, "output/sig_obs10/fixed_pars_full.csv")) %>%
+#   cbind(read_csv(paste0(sim_path, "input/", x, "/type_data.csv")) %>%
+#           select(var, value) %>%
+#           spread(var, value)) %>%
+#   tbl_df %>%
+#   mutate(type = x)
 
 
 
@@ -66,7 +76,7 @@ midges = read_csv("data/midges.csv")
 
 # export parameter estimates
 # model_fit %>%
-#   filter(name %in% c("k0","k1","gamma_1","gamma_2","sig_beta0","sig_alpha","sig_rho","sig_prco")) %>%
+#   filter(name %in% c("k0","k1","gamma_1","gamma_2","sig_beta0","sig_alpha","sig_rho","sig_proc")) %>%
 #   select(name, middle, lower16, upper84) %>%
 #   mutate(middle = round(middle, 3), 
 #          lower16 = round(lower16, 3),
@@ -637,25 +647,22 @@ summary(m)
 #==========
 
 # plot
-# p = pars_fit %>%
-#   select(sig_beta0, sig_alpha, sig_rho, fix_beta0, fix_alpha, fix_rho) %>%
-#   gather(par, value, sig_beta0, sig_alpha, sig_rho) %>%
-#   mutate(fixed = ifelse(par == "sig_beta0", fix_beta0, 
-#                         ifelse(par == "sig_alpha", fix_alpha, fix_rho)),
-#          fixed = ifelse(fixed == T, "Fixed", "Not Fixed"),
-#          par = ifelse(par == "sig_beta0", "sigma[beta[0]]", 
-#                       ifelse(par == "sig_alpha", "sigma[alpha]", "sigma[rho]"))) %>%
-#   select(par, value, fixed) %>%
-#   ggplot(aes(value, linetype = fixed))+
-#   facet_wrap(~par, labeller = label_parsed, nrow = 3, scales = "free_y")+
-#   stat_density(position = "identity", geom = "line")+
-#   scale_y_continuous("Posterior Probability Density", breaks = NULL)+
-#   scale_x_continuous("Value (Dimensionsless)", breaks = c(0.05, 0.13, 0.21))+
-#   scale_linetype_manual("", values = c(2,1))+
-#   theme_base+
-#   theme(legend.position = c(0.75,0.92))
-# 
-# # examine & export
-# p
-# # ggsave("analyses/full_analysis/figures/fig_2.pdf", p, dpi = 300,
-# #        height = 6, width = 3, units = "in")
+p = sim_params %>%
+  select(type, sig_beta0, sig_alpha, sig_rho) %>%
+  gather(par, value, sig_beta0, sig_alpha, sig_rho) %>%
+  mutate(par = ifelse(par == "sig_beta0", "sigma[beta[0]]",
+                      ifelse(par == "sig_alpha", "sigma[alpha]", "sigma[rho]"))) %>%
+  select(par, value, type) %>%
+  ggplot(aes(value, linetype = type))+
+  facet_wrap(~par, labeller = label_parsed, nrow = 3, scales = "free")+
+  stat_density(position = "identity", geom = "line")+
+  scale_y_continuous("Posterior Probability Density", breaks = NULL)+
+  scale_x_continuous("Value (Dimensionsless)", breaks = c(0.05, 0.13, 0.21))+
+  scale_linetype_manual("", values = c(2,1))+
+  theme_base+
+  theme(legend.position = c(0.75,0.92))
+
+# examine & export
+p
+# ggsave("analyses/full_analysis/figures/fig_2.pdf", p, dpi = 300,
+#        height = 6, width = 3, units = "in")

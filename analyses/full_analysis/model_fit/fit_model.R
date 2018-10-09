@@ -72,7 +72,7 @@ init_fn = function(){
 
 # set observation error 
 data_full$sig_obs = 10
-# data_full$sig_obs = 100
+# data_full$sig_obs = 86
 
 # set reference temperature
 # data_full$temp %>% mean()

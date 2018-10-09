@@ -127,9 +127,9 @@ obs_per_day = c({sonde_prep %>%
 z = 3.3
 k2 = 1.7
 n_obs = length(o2_obs)
-n_series = length(obs_per) 
-n_days = sum(days_per)
-n_years = length(days_per)
+n_series = length(obs_per_series) 
+n_days = sum(days_per_year)
+n_years = length(days_per_year)
 
 # export as .R
 # stan_rdump(c("o2_obs","o2_eq","light","temp","wspeed","sch_conv","map_days","obs_per_series","days_per_year",

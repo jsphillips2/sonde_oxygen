@@ -24,6 +24,7 @@ data = read_rdump(paste0("analyses/full_analysis/simulation/input/",
 
 
 
+
 #==========
 #========== Priors & initial values
 #==========
@@ -31,8 +32,8 @@ data = read_rdump(paste0("analyses/full_analysis/simulation/input/",
 # priors
 priors = list(k0_prior = c(2, 1),
               k1_prior = c(0.2, 0.1),
-              gamma_1_prior = c(1.1, 1),
-              gamma_2_prior = c(1.1, 1),
+              gamma_1_prior = c(1, 1),
+              gamma_2_prior = c(1, 1),
               sig_beta0_prior = c(0, 1),
               sig_alpha_prior = c(0, 1),
               sig_rho_prior = c(0, 1),
@@ -48,7 +49,7 @@ priors = list(k0_prior = c(2, 1),
 
 # export priors
 as_data_frame(append(list(par = c("mean","sd")), priors)) %>%
-  gather(name, value, 2:12) %>%
+  gather(name, value, 2:(length(priors) + 1)) %>%
   spread(par, value) %>%
   write_csv(paste0("analyses/full_analysis/simulation/input/",type,"/priors.csv"))
 
@@ -65,17 +66,22 @@ init_fn = function(){
        sig_alpha = runif(n = 1, min = 0, max = 0.2),
        sig_rho = runif(n = 1, min = 0, max = 0.2),
        sig_proc = runif(n = 1, min = 50, max = 150),
-       log_beta0_init = runif(n = data$Y + 1, min = log(0.1) + 5, 
-                           max = log(1.9) + 5),
-       log_alpha_init = runif(n = data$Y + 1, min = log(0.1) + 2, 
-                           max = log(1.9) + 2),
-       log_rho_init = runif(n = data$Y + 1, min = log(0.1) + 5, 
-                         max = log(1.9) + 5)
+       log_beta0_init = runif(n = data$n_years, min = log(0.1) + 5, 
+                              max = log(1.9) + 5),
+       log_alpha_init = runif(n = data$n_years, min = log(0.1) + 2, 
+                              max = log(1.9) + 2),
+       log_rho_init = runif(n = data$n_years, min = log(0.1) + 5, 
+                            max = log(1.9) + 5)
   )
 }
 
 # set observation error 
 data_full$sig_obs = 10
+
+# set reference temperature
+# data_full$temp %>% mean()
+data_full$temp_ref = 12
+
 
 
 
@@ -94,21 +100,19 @@ iter = 1000
 fit = stan(file = model_path, data = data_full, seed=1, chains = chains,
            init = init_fn, iter = iter)
 
-# summary of fit
+ # summary of fit
 fit_summary = summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>% 
 {as_data_frame(.) %>%
     mutate(var = rownames(summary(fit)$summary))}
 
 # check Rhat & n_eff
-# note that initial values beta0, alpha, and rho sample for an extra year
-# these extra values do not contribute to the likelihood
-fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var)
+fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var) %>% arrange(-Rhat)
+fit_summary %>% filter(n_eff < 0.5*(iter/2)) %>% select(Rhat, n_eff, var) %>% arrange(n_eff)
 
 # additional diagnostics
 check_div(fit)
 check_treedepth(fit)
 check_energy(fit)
-
 
 
 
@@ -134,6 +138,9 @@ fixed_pars %>%
   geom_line(alpha=0.5)+
   theme_bw()
 
+# pairs plot for parameters
+ggpairs(fixed_pars %>% select(-chain, -step))
+
 # posterior densities
 fixed_pars %>%
   gather(par, value, -chain, -step) %>%
@@ -145,33 +152,6 @@ fixed_pars %>%
 
 
 
-#==========
-#========== Poterior Predictive Check
-#==========
-
-# extract relevant variables
-post_pred_v = c("chi_proc_real","chi_proc_sim","chi_obs_real","chi_obs_sim")
-post_pred = rstan::extract(fit, pars=post_pred_v) %>%
-  lapply(as_data_frame) %>%
-  bind_cols() %>%
-  mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains))
-names(post_pred) = c(post_pred_v,"chain","step")
-
-# process error
-post_pred %>%
-  ggplot(aes(chi_proc_real,chi_proc_sim))+
-  geom_point()+
-  geom_abline(intercept=0, slope=1)+
-  theme_bw()
-
-# observation error
-post_pred %>%
-  ggplot(aes(chi_obs_real,chi_obs_sim))+
-  geom_point()+
-  geom_abline(intercept=0, slope=1)+
-  theme_bw()
-  
-
 
 
 #==========
@@ -181,7 +161,7 @@ post_pred %>%
 # beta0 and rho full
 daily_pars = c("beta0","alpha","rho")
 daily = rstan::extract(fit, pars=daily_pars) %>% 
-{lapply(1:3, function(x){y = .[[x]] %>% as_data_frame %>%
+{lapply(1:length(daily_pars), function(x){y = .[[x]] %>% as_data_frame %>%
   mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains)) %>%
   gather(var, value, -chain, -step) %>%
   mutate(day = strsplit(var, "V") %>% map_int(~as.integer(.x[2])),
@@ -196,7 +176,9 @@ fit_clean = fit_summary %>%
   rename(lower16 = `16%`, middle = `50%`, upper84 = `84%`)  %>%
   mutate(name = strsplit(var, "\\[|\\]|,") %>% map_chr(~.x[1]),
          index = strsplit(var, "\\[|\\]|,") %>% map_int(~as.integer(.x[2])),
-         day = ifelse(name %in% c("beta0","alpha","rho","GPP","ER","NEP","AIR","Flux"), index, data$D_M[index])) %>%
+         day = ifelse(name %in% c("beta0","alpha","rho","GPP","ER","NEP","AIR","Flux"), 
+                      index, 
+                      data$map_days[index])) %>%
   select(name, index, day, middle, lower16, upper84) %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
@@ -205,7 +187,6 @@ output_path = "analyses/full_analysis/simulation/output/"
 
 # export
 write_csv(fixed_pars, paste0(output_path,import_file,"/fixed_pars_full.csv"))
-write_csv(post_pred, paste0(output_path,import_file,"/post_pred_full.csv"))
 write_csv(daily, paste0(output_path,import_file,"/daily_full.csv"))
 write_csv(fit_clean, paste0(output_path,import_file,"/summary_clean.csv"))
 

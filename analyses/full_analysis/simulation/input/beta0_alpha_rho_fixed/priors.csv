@@ -1,6 +1,6 @@
 name,mean,sd
-gamma_1_prior,1.1,1
-gamma_2_prior,1.1,1
+gamma_1_prior,1,1
+gamma_2_prior,1,1
 k0_prior,2,1
 k1_prior,0.2,0.1
 log_alpha_prior,2,4
