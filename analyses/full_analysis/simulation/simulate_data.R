@@ -59,8 +59,8 @@ data_prep =
   # add remaining parameters
   mutate(gamma_1 = {model_fit %>% filter(name == "gamma_1")}$middle,
          gamma_2 = {model_fit %>% filter(name == "gamma_2")}$middle,
-         k0 = {model_fit %>% filter(name == "k0")}$middle,
-         k1 = {model_fit %>% filter(name == "k1")}$middle,
+         k0 = 2.07,
+         k1 = 0.215,
          k2 = 1.7,
          sig_obs = 10,
          temp_ref = 12,
@@ -145,7 +145,7 @@ data_sim %>%
   facet_wrap(~year)+
   geom_line(alpha = 0.7, size = 0.7)+
   scale_color_manual(values=c("firebrick","dodgerblue"))+
-  scale_y_continuous(limits=c(8,14))+
+  scale_y_continuous(limits=c(8,16))+
   ggtitle(type)+
   theme_base
 
@@ -177,7 +177,7 @@ sonde_prep = data_sim %>%
   mutate(unique_series = year + series/length(unique(series))) %>%
   group_by(unique_series) %>%
   mutate(series_length = length(unique_series)) %>%
-  filter(series_length > 9) %>%
+  filter(series_length > 23) %>%
   ungroup() %>%
   # recreate series index and make unique index for days
   # create index for observations (for joining later)
@@ -219,13 +219,13 @@ sonde_check = sonde_prep %>%
 
 
 # export  data
-# export_file = paste0(type)
-# sonde_check %>%
-#   write_csv(paste0("analyses/full_analysis/simulation/input/",
-#                    export_file,"/data_export.csv"))
-# type_data %>%
-#   write_csv(paste0("analyses/full_analysis/simulation/input/",
-#                    export_file,"/type_data.csv"))
+export_file = paste0(type)
+sonde_check %>%
+  write_csv(paste0("analyses/full_analysis/simulation/input/",
+                   export_file,"/data_export.csv"))
+type_data %>%
+  write_csv(paste0("analyses/full_analysis/simulation/input/",
+                   export_file,"/type_data.csv"))
 
 
 
@@ -251,6 +251,8 @@ obs_per_day = c({sonde_prep %>%
     group_by(unique_day) %>%
     summarize(value = length(unique_day))}$value) 
 z = 3.3
+k0 = 2.07
+k1 = 0.215
 k2 = 1.7
 n_obs = length(o2_obs)
 n_series = length(obs_per_series) 
@@ -258,9 +260,9 @@ n_days = sum(days_per_year)
 n_years = length(days_per_year)
 
 # export as .R
-# stan_rdump(c("o2_obs","o2_eq","light","temp","wspeed","sch_conv","map_days","obs_per_series","days_per_year",
-#              "obs_per_day", "z","k2","n_obs","n_series","n_days","n_years"),
-#            file=paste0("analyses/full_analysis/simulation/input/",
-#                                                          export_file,"/data_list.R"))
+stan_rdump(c("o2_obs","o2_eq","light","temp","wspeed","sch_conv","map_days","obs_per_series","days_per_year",
+             "obs_per_day", "z","k0","k1","k2","n_obs","n_series","n_days","n_years"),
+           file=paste0("analyses/full_analysis/simulation/input/",
+                                                         export_file,"/data_list.R"))
 
 
