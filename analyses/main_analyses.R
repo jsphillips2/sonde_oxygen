@@ -30,7 +30,7 @@ theme_base = theme_bw()+
 
 # set paths for main and simulation analyses
 main_path = "analyses/model_fit/"
-sim_path = "analyses/simulation/"
+# sim_path = "analyses/simulation/"
 
 # data
 sonde_data = read_csv(paste0(main_path,"input/sonde_prep.csv"))
@@ -38,18 +38,18 @@ sonde_data = read_csv(paste0(main_path,"input/sonde_prep.csv"))
 # main analysis
 priors = read_csv(paste0(main_path,"input/priors.csv"))
 params_full = read_csv(paste0(main_path,
-                              "output/sig_obs/fixed_pars_full.csv"))
+                              "output/fixed_pars_full.csv"))
 model_fit = read_csv(paste0(main_path,
-                            "output/sig_obs/summary_clean.csv"))
+                            "output/summary_clean.csv"))
 
 # midges
 midges = read_csv("data/midges.csv")
 
 # simulation anlaysis
-sim_params = read_csv(paste0(main_path, "output/sig_obs10/fixed_pars_full.csv")) %>%
-  mutate(type = "not fixed") %>%
-  bind_rows(read_csv(paste0(sim_path, "output/beta0_alpha_rho_fixed/fixed_pars_full.csv")) %>%
-              mutate(type = "fixed"))
+# sim_params = read_csv(paste0(main_path, "output/sig_obs10/fixed_pars_full.csv")) %>%
+#   mutate(type = "not fixed") %>%
+#   bind_rows(read_csv(paste0(sim_path, "output/beta0_alpha_rho_fixed/fixed_pars_full.csv")) %>%
+#               mutate(type = "fixed"))
 
 # types = c("beta0_alpha_rho_fixed")
 # sim_params = lapply(types, function(x){
