@@ -38,9 +38,9 @@ sonde_data = read_csv(paste0(main_path,"input/sonde_prep.csv"))
 # main analysis
 priors = read_csv(paste0(main_path,"input/priors.csv"))
 params_full = read_csv(paste0(main_path,
-                              "output/sig_obs10/fixed_pars_full.csv"))
+                              "output/sig_obs/fixed_pars_full.csv"))
 model_fit = read_csv(paste0(main_path,
-                            "output/sig_obs10/summary_clean.csv"))
+                            "output/sig_obs/summary_clean.csv"))
 
 # midges
 midges = read_csv("data/midges.csv")
@@ -581,7 +581,8 @@ p
 #        height = 5, width = 5, units = "in")
 
 
-
+m = gls(log(beta0) ~ pcyv, correlation = corCAR1(form = ~ yday|year), data = beta0_phyc)
+summary(m)
 
 
 #==========
