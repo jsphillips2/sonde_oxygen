@@ -5,7 +5,6 @@
 # load packages
 library(tidyverse)
 library(rstan)
-library(truncnorm)
 library(GGally)
 source("model/stan_utility.R")
 
@@ -47,7 +46,8 @@ fit_summary = summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>%
 
 # check Rhat & n_eff
 fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var) %>% arrange(-Rhat)
-fit_summary %>% filter(n_eff < 0.5*(chains*iter/2)) %>% select(Rhat, n_eff, var) %>% arrange(n_eff)
+fit_summary %>% filter(n_eff < 0.5*(chains*iter/2)) %>% select(Rhat, n_eff, var) %>% arrange(n_eff) %>%
+  mutate(eff_frac = n_eff/(chains*iter/2))
 
 # additional diagnostics
 check_div(fit)
@@ -63,7 +63,8 @@ check_energy(fit)
 #==========
 
 # fixed parameters by step
-fixed_par_v = c("gamma_1","gamma_2","sig_b0","sig_a","sig_r","sig_proc","sig_obs","lp__")
+fixed_par_v = c("gamma_1","gamma_2","sig_b0","sig_a","sig_r","sig_proc","lp__")
+# fixed_par_v = c("gamma_1","gamma_2","sig_b0","sig_a","sig_r","sig_proc","sig_obs","lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
@@ -120,17 +121,16 @@ fit_clean = fit_summary %>%
          day = ifelse(name %in% c("beta0","alpha","rho","GPP","ER","NEP","AIR","Flux"), 
                       index, 
                       data$map_days[index])) %>%
-  select(name, index, day, middle, lower16, upper84) %>%
-  filter(!(name %in% c("log_beta0","log_rho","lp__")))
+  select(name, index, day, middle, lower16, upper84)
 
 # export path
 output_path = "analyses/full_analysis/model_fit/output"
 # output_path = "analyses/full_analysis/model_fit/output/sig_obs"
 
 # export
-write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
-write_csv(daily, paste0(output_path,"/daily_full.csv"))
-write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
+# write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
+# write_csv(daily, paste0(output_path,"/daily_full.csv"))
+# write_csv(fit_clean, paste0(output_path,"/summary_clean.csv"))
 
 
 
