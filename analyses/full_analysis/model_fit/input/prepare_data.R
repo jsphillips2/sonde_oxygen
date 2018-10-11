@@ -55,11 +55,11 @@ sonde_prep = sonde_2 %>%
   mutate(series = cumsum(j)) %>% 
   ungroup() %>%
   # create unique index for each series
-  # remove series with fewer than 10 observations
+  # remove series with fewer than 24 observations
   mutate(unique_series = year + series/length(unique(series))) %>%
   group_by(unique_series) %>%
   mutate(series_length = length(unique_series)) %>%
-  filter(series_length > 9) %>%
+  filter(series_length > 23) %>%
   ungroup() %>%
   # recreate series index and make unique index for days
   # create index for observations (for joining later)
@@ -125,6 +125,8 @@ obs_per_day = c({sonde_prep %>%
     group_by(unique_day) %>%
     summarize(value = length(unique_day))}$value) 
 z = 3.3
+k0 = 2.07
+k1 = 0.215
 k2 = 1.7
 n_obs = length(o2_obs)
 n_series = length(obs_per_series) 
@@ -133,7 +135,7 @@ n_years = length(days_per_year)
 
 # export as .R
 # stan_rdump(c("o2_obs","o2_eq","light","temp","wspeed","sch_conv","map_days","obs_per_series","days_per_year",
-#              "obs_per_day", "z","k2","n_obs","n_series","n_days","n_years"),
+#              "obs_per_day", "z","k0","k1","k2","n_obs","n_series","n_days","n_years"),
 #            file="analyses/full_analysis/model_fit/input/sonde_list.R")
 
 
