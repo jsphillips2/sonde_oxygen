@@ -29,8 +29,8 @@ theme_base = theme_bw()+
 #==========
 
 # set paths for main and simulation analyses
-main_path = "analyses/full_analysis/model_fit/"
-sim_path = "analyses/full_analysis/simulation/"
+main_path = "analyses/model_fit/"
+sim_path = "analyses/simulation/"
 
 # data
 sonde_data = read_csv(paste0(main_path,"input/sonde_prep.csv"))
@@ -81,7 +81,7 @@ sim_params = read_csv(paste0(main_path, "output/sig_obs10/fixed_pars_full.csv"))
 #   mutate(middle = round(middle, 3), 
 #          lower16 = round(lower16, 3),
 #          upper84 = round(upper84, 3)) %>%
-#   write_csv("analyses/full_analysis/figures/table_i.csv")
+#   write_csv("analyses/figures/table_i.csv")
 
 
 
@@ -139,7 +139,7 @@ p = test  %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_1.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_1.pdf", p, dpi = 300,
 #        height = 4, width = 5, units = "in")
 
 
@@ -182,7 +182,7 @@ p = model_fit %>%
   
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_2.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_2.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 # gray scale version
@@ -219,7 +219,7 @@ p = model_fit %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_2_gray.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_2_gray.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 
@@ -266,7 +266,7 @@ p = model_fit %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_3.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_3.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 # gray scale version
@@ -305,7 +305,7 @@ p = model_fit %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_3_gray.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_3_gray.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 
@@ -339,7 +339,7 @@ p = model_fit %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_4.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_4.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 
@@ -378,7 +378,7 @@ p = model_fit %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_5.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_5.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 
@@ -429,7 +429,7 @@ p = model_fit %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_6.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_6.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 # gray scale version
@@ -465,7 +465,7 @@ p = model_fit %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_6_gray.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_6_gray.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 # metabolism estimates
@@ -506,7 +506,7 @@ p = model_fit %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_7.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_7.pdf", p, dpi = 300,
 #        height = 4, width = 3, units = "in")
 
 
@@ -555,7 +555,7 @@ p = beta0_phyc %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_8.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_8.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 # gray scale version
@@ -577,7 +577,7 @@ p = beta0_phyc %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_8_gray.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_8_gray.pdf", p, dpi = 300,
 #        height = 5, width = 5, units = "in")
 
 
@@ -665,5 +665,5 @@ p = sim_params %>%
 
 # examine & export
 p
-# ggsave("analyses/full_analysis/figures/fig_2.pdf", p, dpi = 300,
+# ggsave("analyses/figures/fig_2.pdf", p, dpi = 300,
 #        height = 6, width = 3, units = "in")

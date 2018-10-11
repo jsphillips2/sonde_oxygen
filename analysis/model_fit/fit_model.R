@@ -13,7 +13,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-2)
 
 # read data
-data = read_rdump("analyses/full_analysis/model_fit/input/sonde_list.R")
+data = read_rdump("analyses/model_fit/input/sonde_list.R")
 
 # set observation error 
 data$sig_obs = 0.01
@@ -124,8 +124,8 @@ fit_clean = fit_summary %>%
   select(name, index, day, middle, lower16, upper84)
 
 # export path
-output_path = "analyses/full_analysis/model_fit/output"
-# output_path = "analyses/full_analysis/model_fit/output/sig_obs"
+output_path = "analyses/model_fit/output"
+# output_path = "analyses/model_fit/output/sig_obs"
 
 # export
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))
