@@ -30,22 +30,20 @@ data = read_rdump(paste0("analyses/full_analysis/simulation/input/",
 #==========
 
 # priors
-priors = list(k0_prior = c(2, 1),
-              k1_prior = c(0.2, 0.1),
-              gamma_1_prior = c(1, 1),
+priors = list(gamma_1_prior = c(1, 1),
               gamma_2_prior = c(1, 1),
               sig_beta0_prior = c(0, 1),
               sig_alpha_prior = c(0, 1),
               sig_rho_prior = c(0, 1),
-              sig_proc_prior = c(100, 100),
-              log_beta0_prior = c(5, 7),
-              log_alpha_prior = c(2, 4),
-              log_rho_prior = c(5, 7))
+              sig_proc_prior = c(100, 50),
+              log_beta0_prior = c(5, 2),
+              log_alpha_prior = c(2, 1),
+              log_rho_prior = c(5, 2))
 
 # examine priors (change name and bounds as appropriate)
-# priors$k0_prior %>%
-#   {rtruncnorm(n = 50000, a = 0, b = Inf, mean = .[1], sd = .[2])} %>%
-#   hist
+priors$log_rho_prior %>%
+  {rtruncnorm(n = 50000, a = 0, b = Inf, mean = .[1], sd = .[2])} %>%
+  hist
 
 # export priors
 as_data_frame(append(list(par = c("mean","sd")), priors)) %>%
@@ -58,20 +56,15 @@ data_full = data %>% append(priors)
   
 # function for initial values
 init_fn = function(){
-  list(k0 = runif(n = 1, min = 1, max = 3),
-       k1 = runif(n = 1, min = 0.1, max = 0.3),
-       gamma_1 = runif(n = 1, min = 1, max = 2),
+  list(gamma_1 = runif(n = 1, min = 1, max = 2),
        gamma_2 = runif(n = 1, min = 1, max = 2),
        sig_beta = runif(n = 1, min = 0, max = 0.2),
        sig_alpha = runif(n = 1, min = 0, max = 0.2),
        sig_rho = runif(n = 1, min = 0, max = 0.2),
        sig_proc = runif(n = 1, min = 50, max = 150),
-       log_beta0_init = runif(n = data$n_years, min = log(0.1) + 5, 
-                              max = log(1.9) + 5),
-       log_alpha_init = runif(n = data$n_years, min = log(0.1) + 2, 
-                              max = log(1.9) + 2),
-       log_rho_init = runif(n = data$n_years, min = log(0.1) + 5, 
-                            max = log(1.9) + 5)
+       log_beta0_init = runif(n = data$n_years, min = 4, max = 6),
+       log_alpha_init = runif(n = data$n_years, min = 1, max = 3),
+       log_rho_init = runif(n = data$n_years, min = 4, max = 6)
   )
 }
 
@@ -94,7 +87,7 @@ data_full$temp_ref = 12
 model = "o2_model"
 model_path = paste0("model/",model,".stan")
 chains = 1
-iter = 1000
+iter = 2000
 
 # fit model
 fit = stan(file = model_path, data = data_full, seed=1, chains = chains,
