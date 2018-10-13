@@ -38,5 +38,5 @@ vignettes/*.pdf
 .DS_Store
 *.docx
 *.pdf
-
 main_analysis/analysis/figures/
+.RDataTmp
