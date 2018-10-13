@@ -7,10 +7,10 @@ library(tidyverse)
 library(matrixcalc)
 
 # import data and model fit
-input_dir = "analyses/full_analysis/model_fit/"
+input_dir = "analyses/model_fit/"
 sonde_data = read_csv(paste0(input_dir,"input/sonde_prep.csv"))
-params_full = read_csv(paste0(input_dir,"output/sig_obs10/fixed_pars_full.csv"))
-daily = read_csv(paste0(input_dir,"output/sig_obs10/daily_full.csv"))
+params_full = read_csv(paste0(input_dir,"output/fixed_pars_full.csv"))
+daily = read_csv(paste0(input_dir,"output/daily_full.csv"))
 
 
 
@@ -245,7 +245,7 @@ names(gpp_part_sum) = c("lower16","middle","upper84")
 #   mutate(cv = round(cv, 2),
 #          ela = round(ela, 2),
 #          cont100 = round(cont100, 2)) %>%
-#   write_csv("analyses/full_analysis/figures/gpp_part.csv")
+#   write_csv("analyses/figures/gpp_part.csv")
 
 
 
@@ -292,7 +292,7 @@ names(er_part_sum) = c("lower16","middle","upper84")
 #   mutate(cv = round(cv, 2),
 #          ela = round(ela, 2),
 #          cont100 = round(cont100, 2)) %>%
-#   write_csv("analyses/full_analysis/figures/er_part.csv")
+#   write_csv("analyses/figures/er_part.csv")
 
 
 
@@ -340,7 +340,7 @@ names(nep_part_sum) = c("lower16","middle","upper84")
 #   mutate(cv = round(cv, 2),
 #          ela = round(ela, 2),
 #          cont100 = round(cont100, 2)) %>%
-#   write_csv("analyses/full_analysis/figures/nep_part.csv")
+#   write_csv("analyses/figures/nep_part.csv")
 
 
 
