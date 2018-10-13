@@ -161,14 +161,14 @@ p = model_fit %>%
   select(year, yday, hour, par_int, do, nep, air) %>%
   arrange(year, yday, hour) %>%
   group_by(year, yday) %>%
-  mutate(air = air/1000,
-         nep = nep/1000,
+  mutate(air = air/3300,
+         nep = nep/3300,
          flux = c(diff(do), NA) - air) %>%
   group_by(year, yday) %>%
   summarize(flux = 24*mean(flux, na.rm=T),
             nep = 24*mean(nep, na.rm=T)) %>%
   gather(var, value, flux, nep) %>%
-  mutate(var = factor(var, levels = c("flux","nep"), 
+  mutate(var = factor(var, levels = c("nep","flux"), 
                       labels = c("Estimated NEP","Obesrved Flux"))) %>%
   {ggplot(., aes(yday, value, color = var))+
       facet_wrap(~year)+
@@ -198,14 +198,14 @@ p = model_fit %>%
   select(year, yday, hour, par_int, do, nep, air) %>%
   arrange(year, yday, hour) %>%
   group_by(year, yday) %>%
-  mutate(air = air/1000,
-         nep = nep/1000,
+  mutate(air = air/3300,
+         nep = nep/3300,
          flux = c(diff(do), NA) - air) %>%
   group_by(year, yday) %>%
   summarize(flux = 24*mean(flux, na.rm=T),
             nep = 24*mean(nep, na.rm=T)) %>%
   gather(var, value, flux, nep) %>%
-  mutate(var = factor(var, levels = c("flux","nep"), 
+  mutate(var = factor(var, levels = c("nep","flux"), 
                       labels = c("Estimated NEP","Obesrved Flux"))) %>%
                       {ggplot(., aes(yday, value, linetype = var))+
                           facet_wrap(~year)+
