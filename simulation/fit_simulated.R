@@ -14,66 +14,18 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-2)
 
 # simulation type
-type = "beta0_alpha_rho_fixed"
-import_file = paste0(type)
+import_file = "_fixed"
 
 # read data
-data = read_rdump(paste0("analyses/full_analysis/simulation/input/",
+data = read_rdump(paste0("simulation/input/",
                          import_file,"/data_list.R"))
 
-
-
-
-
-#==========
-#========== Priors & initial values
-#==========
-
-# priors
-priors = list(gamma_1_prior = c(1, 1),
-              gamma_2_prior = c(1, 1),
-              sig_beta0_prior = c(0, 1),
-              sig_alpha_prior = c(0, 1),
-              sig_rho_prior = c(0, 1),
-              sig_proc_prior = c(100, 50),
-              log_beta0_prior = c(5, 2),
-              log_alpha_prior = c(2, 1),
-              log_rho_prior = c(5, 2))
-
-# examine priors (change name and bounds as appropriate)
-priors$log_rho_prior %>%
-  {rtruncnorm(n = 50000, a = 0, b = Inf, mean = .[1], sd = .[2])} %>%
-  hist
-
-# export priors
-as_data_frame(append(list(par = c("mean","sd")), priors)) %>%
-  gather(name, value, 2:(length(priors) + 1)) %>%
-  spread(par, value) %>%
-  write_csv(paste0("analyses/full_analysis/simulation/input/",type,"/priors.csv"))
-
-# add priors to data
-data_full = data %>% append(priors)
-  
-# function for initial values
-init_fn = function(){
-  list(gamma_1 = runif(n = 1, min = 1, max = 2),
-       gamma_2 = runif(n = 1, min = 1, max = 2),
-       sig_beta = runif(n = 1, min = 0, max = 0.2),
-       sig_alpha = runif(n = 1, min = 0, max = 0.2),
-       sig_rho = runif(n = 1, min = 0, max = 0.2),
-       sig_proc = runif(n = 1, min = 50, max = 150),
-       log_beta0_init = runif(n = data$n_years, min = 4, max = 6),
-       log_alpha_init = runif(n = data$n_years, min = 1, max = 3),
-       log_rho_init = runif(n = data$n_years, min = 4, max = 6)
-  )
-}
-
 # set observation error 
-data_full$sig_obs = 10
+data$sig_obs = 0.01
 
 # set reference temperature
 # data_full$temp %>% mean()
-data_full$temp_ref = 12
+data$temp_ref = 12
 
 
 
@@ -87,20 +39,20 @@ data_full$temp_ref = 12
 model = "o2_model"
 model_path = paste0("model/",model,".stan")
 chains = 1
-iter = 2000
+iter = 1000
 
 # fit model
-fit = stan(file = model_path, data = data_full, seed=1, chains = chains,
-           init = init_fn, iter = iter)
+fit = stan(file = model_path, data = data, seed=1, chains = chains, iter = iter)
 
- # summary of fit
+# summary of fit
 fit_summary = summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>% 
 {as_data_frame(.) %>%
     mutate(var = rownames(summary(fit)$summary))}
 
 # check Rhat & n_eff
 fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var) %>% arrange(-Rhat)
-fit_summary %>% filter(n_eff < 0.5*(iter/2)) %>% select(Rhat, n_eff, var) %>% arrange(n_eff)
+fit_summary %>% filter(n_eff < 0.5*(chains*iter/2)) %>% select(Rhat, n_eff, var) %>% arrange(n_eff) %>%
+  mutate(eff_frac = n_eff/(chains*iter/2))
 
 # additional diagnostics
 check_div(fit)
@@ -110,12 +62,14 @@ check_energy(fit)
 
 
 
+
 #==========
 #========== Examine Chains
 #==========
 
 # fixed parameters by step
-fixed_par_v = c("gamma_1","gamma_2","k0","k1","sig_beta0","sig_alpha","sig_rho","sig_proc","lp__")
+fixed_par_v = c("gamma_1","gamma_2","sig_b0","sig_a","sig_r","sig_proc","lp__")
+# fixed_par_v = c("gamma_1","gamma_2","sig_b0","sig_a","sig_r","sig_proc","sig_obs","lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
   lapply(as_data_frame) %>%
   bind_cols() %>%
@@ -176,7 +130,7 @@ fit_clean = fit_summary %>%
   filter(!(name %in% c("log_beta0","log_rho","lp__")))
 
 # export path
-output_path = "analyses/full_analysis/simulation/output/"
+output_path = "simulation/output/"
 
 # export
 write_csv(fixed_pars, paste0(output_path,import_file,"/fixed_pars_full.csv"))
