@@ -7,11 +7,9 @@ library(tidyverse)
 library(rstan)
 
 # import data and model fit
-sonde_data = read_csv("analyses/full_analysis/model_fit/input/sonde_prep.csv")
-model_fit = read_csv("analyses/full_analysis/model_fit/output/sig_obs10/summary_clean.csv")
-
-# select years
-years = sonde_data$year %>% unique
+sonde_data = read_csv("analyses/model_fit/input/sonde_prep.csv")
+model_fit = read_csv("analyses/model_fit/output/summary_clean.csv")
+data = read_rdump("analyses/model_fit/input/sonde_list.R")
 
 # base theme
 theme_base = theme_bw()+
@@ -45,30 +43,23 @@ data_prep =
               select(-index, -lower16, -upper84) %>%
               spread(name, middle)) %>%
   # combine with sonde data
-  full_join(sonde_data %>%
+  left_join(sonde_data %>%
               # filter(is.na(unique_day)==F) %>%
               select(year, yday, index, hour,  unique_series, unique_day, do, do_eq, 
                      par_int, temp, wspeed, sch_conv)) %>%
-  mutate(do = 1000*do, do_eq = 1000*do_eq) %>%
-  arrange(year, yday, hour) %>%
-  group_by(unique_series) %>%
-  # calculate process and observation errors
-  mutate(proc_err = c(0,o2[2:length(o2)] - o2_pred[1:(length(o2_pred)-1)]),
-         obs_err = do - o2) %>%
-  filter(year %in% years) %>%
-  # add remaining parameters
-  mutate(gamma_1 = {model_fit %>% filter(name == "gamma_1")}$middle,
-         gamma_2 = {model_fit %>% filter(name == "gamma_2")}$middle,
-         k0 = 2.07,
-         k1 = 0.215,
-         k2 = 1.7,
-         sig_obs = 10,
-         temp_ref = 12,
-         z = 3.3) %>%
-  ungroup()
+  mutate(do = 1000*do, do_eq = 1000*do_eq) 
+
+# define fixed parameters
+fixed_vals = data_frame(gamma_1 = {model_fit %>% filter(name == "gamma_1")}$middle,
+                        gamma_2 = {model_fit %>% filter(name == "gamma_2")}$middle,
+                        k0 = data$k0,
+                        k1 = data$k1,
+                        k2 = data$k2,
+                        z = data$z,
+                        temp_ref = 12)
 
 # define function to simulate
-sim_fn = function(x){
+sim_fn = function(x, y){
   x %>% 
   {
     sim_o2 = c(.$o2[1], rep(NA, nrow(x) - 1))
@@ -79,15 +70,16 @@ sim_fn = function(x){
     air = rep(NA, nrow(x))
     o2_pred = rep(NA, nrow(x))
     for(t in 2:nrow(.)){
-      beta[t-1] = .$beta0[t-1]*.$gamma_1[t-1]^(.$temp[t-1] - .$temp_ref[t-1]);
+      beta[t-1] = .$beta0[t-1]*y$gamma_1^(.$temp[t-1] - y$temp_ref);
       gpp[t-1] = beta[t-1]*tanh((.$alpha[t-1]/beta[t-1])*.$par_int[t-1]);
-      er[t-1] = .$rho[t-1]*.$gamma_2[t-1]^(.$temp[t-1] - .$temp_ref[t-1]);
+      er[t-1] = .$rho[t-1]*y$gamma_2^(.$temp[t-1] - y$temp_ref);
       nep[t-1] = gpp[t-1] - er[t-1];
-      air[t-1] = ((.$k0[t-1] + .$k1[t-1]*.$wspeed[t-1]^.$k2[t-1])/100)*.$sch_conv[t-1]*(.$do_eq[t-1] - sim_o2[t-1]);
-      o2_pred[t-1] = sim_o2[t-1] + (nep[t-1] + air[t-1])/.$z[t-1];
-      sim_o2[t] = o2_pred[t-1] + .$proc_err[t] + .$obs_err[t-1];
+      air[t-1] = ((y$k0 + y$k1*.$wspeed[t-1]^y$k2)/100)*.$sch_conv[t-1]*(.$do_eq[t-1] - sim_o2[t-1]);
+      o2_pred[t-1] = sim_o2[t-1] + (nep[t-1] + air[t-1])/y$z;
+      sim_o2[t] = o2_pred[t-1] + .$proc_err[t-1];
     }
     df = data_frame(unique_series = .$unique_series,
+                    year = .$year,
                     day = .$day,
                     hour = .$hour,
                     sim_o2 = sim_o2)
@@ -105,14 +97,19 @@ sim_fn = function(x){
 
 # specify which variables should be 'fixed' to their mean
 data_prep2 = data_prep %>% 
+  group_by(year) %>%
   mutate(
     fix_beta0 = T,
     fix_alpha = T,
     fix_rho = T,
     beta0 = ifelse(fix_beta0 == T, mean(beta0, na.rm=T), beta0),
     alpha = ifelse(fix_alpha == T, mean(alpha, na.rm=T), alpha),
-    rho = ifelse(fix_rho == T, mean(rho, na.rm=T), rho)
-  )
+    rho = ifelse(fix_rho == T, mean(rho, na.rm=T), rho)) %>%
+  arrange(year, yday, hour) %>%
+  group_by(unique_series) %>%
+  # calculate process and observation errors
+  mutate(proc_err = c(0,o2[2:length(o2)] - o2_pred[1:(length(o2_pred)-1)])) %>%
+  ungroup() 
 
 # extract simulation type from specifications
 type_data = data_prep2 %>% 
@@ -127,13 +124,14 @@ type = {type_data %>%
   paste0("fixed")
 
 # simulate
-data_sim = data_prep2 %>%
-  full_join(data_prep2  %>%
-              split(.$unique_series) %>%
-              lapply(function(x) 
-              {sim_fn(x)}) %>%
-              bind_rows()) %>%
-  mutate(type = type)
+data_sim = data_prep2  %>%
+  # split(.$unique_series) %>%
+  split(.$year) %>%
+  lapply(function(x) {sim_fn(x, fixed_vals)}) %>%
+  bind_rows() %>%
+  mutate(sim_o2 = sim_o2/1000) %>%
+  full_join(sonde_data %>%
+              rename(day = unique_day))
 
 
 # plot and compare to actual data
@@ -141,11 +139,11 @@ data_sim %>%
   mutate(time = yday + hour/24) %>%
   select(year, time, do, sim_o2) %>%
   gather(var, value, do, sim_o2) %>%
-  ggplot(aes(time, value/1000, color = var))+
+  ggplot(aes(time, value, color = var))+
   facet_wrap(~year)+
   geom_line(alpha = 0.7, size = 0.7)+
   scale_color_manual(values=c("firebrick","dodgerblue"))+
-  scale_y_continuous(limits=c(8,16))+
+  scale_y_continuous(limits=c(5,17))+
   ggtitle(type)+
   theme_base
 
@@ -163,7 +161,6 @@ data_sim %>%
 sonde_prep = data_sim %>% 
   select(-do) %>%
   rename(do = sim_o2) %>%
-  mutate(do = do/1000, do_eq = do/1000) %>%
   arrange(year, yday, hour) %>%
   # for each year, create identifier for uninterrupted stretches of observations
   group_by(year) %>%
@@ -192,10 +189,10 @@ sonde_prep = data_sim %>%
 # return missing observations for check
 sonde_check = sonde_prep %>% 
   expand(year,yday,hour) %>%
-  full_join(data_sim) %>%
+  full_join(sonde_prep) %>%
   arrange(year,yday)
 
-# # check unique_series
+# check unique_series
 # sonde_check %>%
 #   mutate(time = yday + hour/24) %>%
 #   ggplot(aes(time, do, color=factor(unique_series)))+
@@ -203,28 +200,24 @@ sonde_check = sonde_prep %>%
 #   geom_line()+
 #   scale_color_discrete(guide = F)+
 #   theme_bw()
-# 
-# # check unique_days
+
+# check unique_days
 # sonde_check %>%
 #   mutate(time = yday + hour/24) %>%
-#   filter(unique_day %in% (50 + c(1:10))) %>%
+#   filter(unique_day %in% (35 + c(1:10))) %>%
 #   ggplot(aes(time, do, color=factor(unique_day)))+
 #   facet_wrap(~year, scale = "free_x", nrow=2)+
 #   geom_line()+
 #   theme_bw()
 
-# export prepared data
-# sonde_check %>%
-#   write_csv("analyses/full_analysis/model_fit/input/sonde_prep.csv")
-
 
 # export  data
-export_file = paste0(type)
+export_file = type
 sonde_check %>%
-  write_csv(paste0("analyses/full_analysis/simulation/input/",
+  write_csv(paste0("simulation/input/",
                    export_file,"/data_export.csv"))
 type_data %>%
-  write_csv(paste0("analyses/full_analysis/simulation/input/",
+  write_csv(paste0("simulation/input/",
                    export_file,"/type_data.csv"))
 
 
@@ -262,7 +255,6 @@ n_years = length(days_per_year)
 # export as .R
 stan_rdump(c("o2_obs","o2_eq","light","temp","wspeed","sch_conv","map_days","obs_per_series","days_per_year",
              "obs_per_day", "z","k0","k1","k2","n_obs","n_series","n_days","n_years"),
-           file=paste0("analyses/full_analysis/simulation/input/",
-                                                         export_file,"/data_list.R"))
+           file=paste0("simulation/input/",export_file,"/data_list.R"))
 
 
