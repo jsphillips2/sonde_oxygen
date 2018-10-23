@@ -1,33 +1,53 @@
 ---
-title: "Nondimensionalization"
+title: 'Supplemental Materials: Time-varying responses of lake metabolism to light and temperature'
 fontsize: 12pt
+geometry: margin=1in,letterpaper
+documentclass: article
+mainfont: "Times New Roman"
+mathfont: "Times New Roman"
+graphics: true
+supplemental: true
+mathspec: true
+author:
+   - name: Joseph Phillips
+affil:
+   - name: Department of Integrative Biology, University of Wisconsin--Madison
 output:
-  bookdown::pdf_book:
-    toc: no
-classoption: fleqn
+    bookdown::pdf_document2:
+        fig_caption: yes
+        number_sections: yes
+        template: template.tex
+        latex_engine: xelatex
+        toc: yes
+        toc_depth: 2
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=FALSE, cache = FALSE}
+suppressPackageStartupMessages({
+    library(knitr)
+    library(bookdown)
+})
 ```
 
-#Net DO Flux
+# Model fitting
+## Scaling the model
+### NEP
+Prior to fitting the model, I z-scored (centerd on the mean and divided by the standard deviation) the observed DO concentrations and scaled the model accordingly. I then nondimensionalized the scaled model to remove the scale parameters (mean and standard deviation for the observed DO; mixing depth). This put the observed values and model parameters on unit scale, which improved the computaitonal efficiency and allowed for the use for weakly-informative priors on unit scale. I then back-transformed the nondimensionalized parameters to recover their values on the original scale.
 
-The dimensional version of the model for DO dynamics is 
-
+The model for DO dynamics (eqn X in the main text) is:
 $$
 DO_{t+1} = DO_t+ \frac{\Delta h}{z_{mix}} \left(NEP_t+k_t(DO^{eq}_t-DO_t) \right)+\epsilon^{proc}_t
 $$
 
-where $DO_t$ is the DO [$mg~O_2~m^{-3}$], $DO^{eq}_t$ is the equilibrium DO [$mg~O_2~m^{-3}$], $\Delta h$ = 1 hour, NEP is the net ecosystem production [$mg~O_2~m^{-2}~h^{-1}$], $k$ [$m~h^{-1}$] is the rate of oxygen exchange, $z_{mix}$ is the mixing depth [$3.3m$], and $\epsilon_{proc}$ is the processes error [$mg~O_2~m^{-3}$]. For simplicity, only a single time index $t$ is used, rather than indexing by hour and day. 
+where $DO_t$ is the DO concentration [$mg~O_2~m^{-3}$], $DO^{eq}_t$ is the DO concentration at saturation [$mg~O_2~m^{-3}$], $\Delta h$ = 1 hour, $NEP_t$ is the net ecosystem production [$mg~O_2~m^{-2}~h^{-1}$], $k$ [$m~h^{-1}$] is the rate of oxygen exchange, $z_{mix}$ is the mixing depth [$3.3m$], and $\epsilon_{proc}$ is the processes error [$mg~O_2~m^{-3}$]. For simplicity, only a single time index $t$ is used, rather than indexing by hour and day as in the main text.
 
-For clarity, replace $DO$ with $y$ and $NEP$ with $\phi$, yielding
+For clarity, $DO$ is replaced with $y$ and $NEP$ with $\phi$, yielding
 
 $$
 y_{t+1} = y_t+ \frac{\Delta h}{z_{mix}}\left(\phi_t+k_t(y^{eq}_t-y_t) \right)+\epsilon^{proc}_t.
 $$
 
-To nondimensionalize the model, let $\mu$ denote the mean and $\tau$ the standard deviation of the DO for the complete time series. The model can then be nondimensionalized as
+Z-scoring the observed DO values by their  mean ($\mu$) and standard deviation ($\tau$) implies the following scaling of the model:
 
 $$
 \frac{y_{t+1}-\mu}{\tau} = \frac{1}{\tau} \left(y_t - \mu + \frac{\Delta h}{z_{mix}} \left(\phi_t+k_t(y^{eq}_t-y_t) \right)+\epsilon^{proc}_t \right)
@@ -51,35 +71,40 @@ $$
 \frac{y_{t+1}-\mu}{\tau} = \frac{y_t-\mu}{\tau} + \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\phi_t + \frac{\Delta h}{z_{mix}} k_t\left( \frac{y^{eq}_t-\mu}{\tau} - \frac{y_t-\mu}{\tau} \right) + \frac{1}{\tau}\epsilon^{proc}_t. 
 $$
 
-Finally, we can substitute nondimensionalized variables, yielding 
+Substitutting nondimesionalized values yields
 
 $$
 x_{t+1} = x_t + \hat{\phi_t} + \hat{k}_t (x^{eq}_t - x_t) + \hat{\epsilon}^{proc}_t
 $$
 where 
-$$
-x_t = \frac{y_t-\mu}{\tau}\\
-x^{eq}_t = \frac{y^{eq}_t-\mu}{\tau}\\
-\hat{\phi}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\phi_t\\
-\hat{k}_t = \frac{\Delta h}{z_{mix}} k_t\\
-\hat{\epsilon}^{proc}_t = \frac{1}{\tau}\epsilon^{proc}_t.
-$$
 
-#GPP and ER
+\begin{equation}
+\begin{split}
+&x_t = \frac{y_t-\mu}{\tau}  \\
+&x^{eq}_t = \frac{y^{eq}_t-\mu}{\tau} \\
+&\hat{\phi}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\phi_t \\
+&\hat{k}_t = \frac{\Delta h}{z_{mix}} k_t \\
+&\hat{\epsilon}^{proc}_t = \frac{1}{\tau}\epsilon^{proc}_t
+\end{split}
+\end{equation}
 
-NEP ($\phi_t$) is the difference between GPP and ER. Therefore, the nondimesionalization of NEP implies that GPP ($\chi$) and ER ($\kappa$) are nondimesionalized as 
-$$
+###GPP and ER
+NEP ($\phi_t$) is the difference between GPP and ER. Therefore, the scaling of NEP implies that GPP ($\chi$) and ER ($\kappa$) are scaled as 
+
+\begin{equation}
+\begin{split}
 \hat{\chi}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\chi_t\\
 \hat{\kappa}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\kappa_t\\
-$$
+\end{split}
+\end{equation}
 
-The dimesional equation for GPP ($\chi$) is
+The original equation for GPP ($\chi$) is
 
 $$
 \chi_t = \beta_{d}~\text{tanh} \left( \frac{\alpha_t}{\beta_t}L_t\right)  
 $$ 
 
-where $\beta_t$ is the maximum rate of GPP [$mg~O_2~m^{-3}~h^{-1}$] on a particular day and $\alpha$ [$mg~O_2~s~\mu mol~photons^{-1}~m^{-1}~h^{-1}$] is the rate at which GPP increases with $L_t$. This is nondimensionalized as
+where $\beta_t$ is the maximum rate of GPP [$mg~O_2~m^{-3}~h^{-1}$] on a particular day and $\alpha$ [$mg~O_2~s~\mu mol~photons^{-1}~m^{-1}~h^{-1}$] is the rate at which GPP increases with $L_t$. This is scaled as
 
 $$
 \hat{\chi}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\beta_t~\text{tanh} \left( \frac{\frac{\lambda}{\tau}\frac{\Delta h}{z_{mix}}\alpha_t}{\frac{1}{\tau}\frac{\Delta h}{z_{mix}}\beta_t}\frac{L_t}{\lambda}\right)  
@@ -92,29 +117,16 @@ $$
 $$ 
 
 where 
+\begin{equation}
+\begin{split}
+&\hat{\beta}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\beta_t\\
+&\hat{\alpha}_t = \frac{\lambda}{\tau}\frac{\Delta h}{z_{mix}}~\alpha_t\\
+&\hat{L}_t = \frac{L_t}{\lambda}.
+\end{split}
+\end{equation}
 
-$$
-\hat{\beta}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\beta_t\\
-\hat{\alpha}_t = \frac{\lambda}{\tau}\frac{\Delta h}{z_{mix}}~\alpha_t\\
-\hat{L}_t = \frac{L_t}{\lambda}.
-$$
+This scaling by be applied by direct analogy to ER and to the time varying components of $\beta_t$, $\alpha_t$, and $\rho_t$ (main text eqns X-X)
 
-The dimesional equation for ER ($\kappa$) is 
+## Priors
 
-$$
-\kappa_t = \rho_t~\gamma^{(T_t-T_{ref})/\Delta T}
-$$
-where is $\rho_t$ the baseline respiration rate [$mg~O_2~m^{-3}~h^{-1}$] at a reference temperature $T_{ref}$ [$~^\circ C$], $T_t$ is the observed temperature, and $\Delta T$ = $1^\circ$C to make the exponent dimensionless. By direct analogy to NEP, the nondimesionalized form is
-
-$$
-\hat{\kappa}_t = \hat{\rho}_t~\gamma^{(T_t-T_{ref})/\Delta T}
-$$
-
-where
-
-$$
-\hat{\rho}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\rho_t.
-$$
-
-The temperature dependence of $\hat{\beta}_t$ and the temporal variation in $\hat{\beta}_t$, $\hat{\alpha}_t$, and $\hat{\rho}_t$ (following equations in the main text) can be defined with respect to nondimesionalized variables in an exaclty analagous manner.
 
