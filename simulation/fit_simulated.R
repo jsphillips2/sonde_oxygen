@@ -14,7 +14,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-2)
 
 # simulation type
-import_file = "_fixed"
+import_file = "beta0_alpha_rho_fixed"
 
 # read data
 data = read_rdump(paste0("simulation/input/",
@@ -39,7 +39,7 @@ data$temp_ref = 12
 model = "o2_model"
 model_path = paste0("model/",model,".stan")
 chains = 1
-iter = 1000
+iter = 2000
 
 # fit model
 fit = stan(file = model_path, data = data, seed=1, chains = chains, iter = iter)
