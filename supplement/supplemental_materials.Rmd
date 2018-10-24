@@ -31,6 +31,7 @@ suppressPackageStartupMessages({
   library(knitr)
   library(bookdown)
   library(tidyverse)  
+  library(lubridate)
 })
 
 # set directory
@@ -228,7 +229,7 @@ read_csv("simulation/input/beta0_alpha_rho_fixed/data_export.csv") %>%
   mutate(time = yday + hour/24) %>%
   ggplot(aes(time, do, color = type))+
   facet_wrap(~year)+
-  geom_line(alpha = 0.7, size = 0.7)+
+  geom_line(alpha = 0.7, size = 0.5)+
   scale_color_manual("",values=c("forestgreen","black"))+
   scale_y_continuous(expression(DO~"("*mg~O[2]~L^{-1}*")"))+
   scale_x_continuous("Day of Year")+
@@ -322,11 +323,11 @@ beta_rho_d %>%
                               name = c("beta0","beta0","rho","rho"), 
                               middle = c(490, 410, 240, 160)), 
             aes(color = name), 
-            label=c("Max GPP",expression((beta[0])), "Basline ER", expression((rho))), 
+            label=c("Max GPP",expression((beta^0)), "Basline ER", expression((rho))), 
             hjust = 0)+
   scale_y_continuous(expression(Metabolism~Parameter~"("*mg~O[2]~m^{-2}~h^{-1}*")"))+
   scale_color_manual("",values=c("dodgerblue","firebrick2"), guide = F)+
-  scale_linetype_manual("Light",values=c(2,1))+
+  scale_linetype_manual("",values=c(2,1))+
   scale_size_manual(values=c(0.7, 0.4))+
   scale_x_continuous("Day of Year", breaks = c(170, 200, 230), limits = c(150, 250))+
   guides(size = F)+
@@ -357,7 +358,7 @@ alpha_d %>%
   ggplot(aes(yday, middle))+
   facet_wrap(~year)+
   geom_line(aes(linetype = type, size = type), alpha = 0.7)+
-  scale_linetype_manual("Light",values=c(2,1))+
+  scale_linetype_manual("",values=c(2,1))+
   scale_size_manual(values=c(0.7, 0.4))+
   scale_y_continuous(expression(Initial~Slope~(alpha)~"("*mg~O[2]~s~mu*mol-photons^{-1}~h^{-1}*")"))+
   scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
@@ -365,6 +366,58 @@ alpha_d %>%
   theme(legend.position = c(0.14,0.91))
 ```
 
+# Drivers of maximum GPP
+
+Maximum GPP at high light $\beta_d^0$ was quite variable, and it was the dominant contributor to variation in overall GPP and NEP. In the main text, I report results from linear models regressing $\beta_d^0$ against daily mean phycocyanin (as a measure of cyanobacterial abundance) and larval midge abundance. Phycocyanin data were available for all days for which there were estimates of $\beta_d^0$, while midge data were only available approximately weekly. Therefore, I fit two models: (1) including phycocyanin for all days, and (2) including both phycocyanin and midge abundance for those days when midge samples were collected. In the main text I show a figure relating $\beta_d^0$ against phycocyanin for all days. Here I show the corresponding figure for those days where midges were samples (Fig \ref{fig:midges}).
+
+```{r midges, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Time-series of maximum GPP (as inferred from the model), phycocyanin, and midge larva."}
+
+# prepare beta0 and phycocyanin data
+beta0_phyc = read_csv("analyses/model_fit/output/summary_clean.csv") %>%
+  filter(name %in% c("beta0")) %>%
+  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              filter(pcyv < 0.3) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day),
+                        pcyv = mean(pcyv))) %>%
+  select(year, yday, middle, pcyv) %>%
+  rename(beta0 = middle) 
+
+# prepare midge data
+midges_summary = read_csv("data/midges.csv") %>%
+              filter(sta %in% c(3, 33)) %>%
+              mutate(year = year(sampledate),
+                     yday = yday(sampledate)) %>%
+              group_by(year, yday, coreid) %>%
+              summarize(tanyt = sum(tanyt/fract_count),
+                        chiro = sum(chiro/fract_count),
+                        midges = tanyt + chiro) %>%
+              group_by(year, yday) %>%
+              summarize(tanyt = mean(tanyt, na.rm=T),
+                            chiro = mean(chiro, na.rm=T),
+                            midges = mean(midges, na.rm=T))
+
+# combine 
+beta0_phyc_midge = beta0_phyc %>%
+  left_join(midges_summary) %>%
+  na.omit()
+
+# plot
+beta0_phyc_midge %>%
+  gather(var, val, beta0, pcyv, midges) %>%
+  group_by(var) %>%
+  mutate(val = (val - mean(val, na.rm=T))/sd(val, na.rm=T)) %>%
+  ungroup() %>%
+  mutate(var = factor(var, levels=c("beta0","pcyv","midges"), labels=c("Max GPP", "Phycocyanin", "Midges"))) %>%
+  ggplot(aes(yday, val, color = var))+
+  facet_wrap(~year)+
+  geom_line()+
+  scale_color_manual("",values = c("black","cyan4","magenta4"))+
+  scale_y_continuous("Z-Score (dimensionless)", breaks = NULL)+
+  scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
+  theme(legend.position = c(0.14, 0.88))
+```
 
 
 
