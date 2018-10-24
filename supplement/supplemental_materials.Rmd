@@ -274,13 +274,96 @@ sig_par %>%
         strip.text=element_blank())
 ```
 
+\clearpage
+
 # Surface vs. average water column PAR
+
 ## Methods
+
+Because primary production occurs throughout the water column and in the benthos, I fit the model using the average water column light, calcualted as 
+
+$$
+\begin{aligned}
+&\overline{L_{d,h}(z)} = \frac{1}{z_\text{max}} \int_0^{z_\text{max}} L^0_{d,h}~e^{-c_{d,h}~z}~dz =  \frac{L^0_{d,h}(1-e^{-c_d,h~z_\text{max}})}{z_\text{max}~c_{d,h}}
+\end{aligned}
+$$
+where $z$ [$m$] is the vertical position in the water column, $z_{max}$ is the water column depth, $L^0_{d,h}$ is the PAR at the water surface $(z=0)$, and $c_{d,h}$ is the light attenuation coefficient (we used $c$ rather than the standard $k_d$ to avoid notational confusion with gas exhange constants used below). For notational simplicity, we henceforth denote $\overline{L_{d,h}(z)}$ as $L_{d,h}$. To estimate $c_{d,h}$, I regressed observe light attenuation calculated from weekly measurements of PAR at 0.5m depth intervals against turbidity and used this regression (y = 0.43 + 0.059 $\times$ turbidity; df = 34; $R^2$ = 0.66) to predict $c_{d,h}$ from turbidity for each time point in the sonde data. 
+
+The estimates $\overline{L_{d,h}(z)}$ have some uncertainty to do the inference of water clarity from turbidity. Furthermore, it is common in other studies of ecosystem metaboslim to use light as measured near the water surface. To evaluate the consequences of using $\overline{L_{d,h}(z)}$, I refit the model to surface light ($L^0_{d,h}$) and compared the estimates of the time-varying parameters to those for the original model fit. 
+
 ## Results
 
+The estimates of baseline ER and maximum GPP were almost identical for both surface and water column light, as they should be given that they characterize metabolism when light is 0 (i.e. when surface and water column light are the same) and when light is saturating (i.e. when differences between surface and water column later are irrelevant) (Fig \ref{fig:beta0-rho}). The average value of the initial slope of the P-I curve was substantially lower for the model fit using surface light, which again was as expected since the surface light values were always higher than the water column values (Fig \ref{fig:alpha}). However, the temporal patterns were very similar, with the largest differences being relatively high values in 2015 and 2018 when using the water column light. These two years had substantial declines in water column light due to reduced water clarity associated with cyanobacterial blooms. 
 
+```{r beta0-rho, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Ecosystem metabolism rates estimated using either surface or average water column light."}
 
+# prepare data
+beta_rho_d = read_csv("analyses/model_fit/output/summary_clean.csv") %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+  mutate(type = "Water Column") %>%
+  bind_rows(read_csv("analyses/model_fit/output/surface_par/summary_clean.csv") %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+    mutate(type = "Surface"))
 
+# plot
+beta_rho_d %>%
+  ggplot(aes(yday, middle, color=name))+
+  facet_wrap(~year)+
+  geom_line(aes(linetype = type, size = type), alpha = 0.7)+
+  geom_text(data = data_frame(year = 2015, yday = 187, 
+                              name = c("beta0","beta0","rho","rho"), 
+                              middle = c(490, 410, 240, 160)), 
+            aes(color = name), 
+            label=c("Max GPP",expression((beta[0])), "Basline ER", expression((rho))), 
+            hjust = 0)+
+  scale_y_continuous(expression(Metabolism~Parameter~"("*mg~O[2]~m^{-2}~h^{-1}*")"))+
+  scale_color_manual("",values=c("dodgerblue","firebrick2"), guide = F)+
+  scale_linetype_manual("Light",values=c(2,1))+
+  scale_size_manual(values=c(0.7, 0.4))+
+  scale_x_continuous("Day of Year", breaks = c(170, 200, 230), limits = c(150, 250))+
+  guides(size = F)+
+  theme(legend.position = c(0.82,0.91))
+```
+
+```{r alpha, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Initial slope of the P-I curve estimated using either surface or average water column light."}
+
+# prepare data
+alpha_d = read_csv("analyses/model_fit/output/summary_clean.csv") %>%
+  filter(name %in% c("alpha")) %>%
+  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+  mutate(type = "Water Column") %>%
+  bind_rows(read_csv("analyses/model_fit/output/surface_par/summary_clean.csv") %>%
+  filter(name %in% c("alpha")) %>%
+  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+    mutate(type = "Surface"))
+
+# plot
+alpha_d %>%
+  filter(name %in% c("alpha")) %>%
+  ggplot(aes(yday, middle))+
+  facet_wrap(~year)+
+  geom_line(aes(linetype = type, size = type), alpha = 0.7)+
+  scale_linetype_manual("Light",values=c(2,1))+
+  scale_size_manual(values=c(0.7, 0.4))+
+  scale_y_continuous(expression(Initial~Slope~(alpha)~"("*mg~O[2]~s~mu*mol-photons^{-1}~h^{-1}*")"))+
+  scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
+  guides(size = F)+
+  theme(legend.position = c(0.14,0.91))
+```
 
 
 
