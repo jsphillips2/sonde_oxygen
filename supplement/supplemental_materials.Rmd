@@ -49,8 +49,11 @@ theme_set(theme_bw() %+replace%
 ```
 
 # Model fitting
+
 ## Scaling the model
+
 ### NEP
+
 For fitting the model, I z-scored (centered on the mean and divided by the standard deviation) the observed DO concentrations and scaled the model accordingly. I then nondimensionalized the scaled model to remove the scale parameters (mean/standard deviation for the observed DO and mixing depth). This put the observed values and model parameters on unit scale, which improved the computaitonal efficiency and allowed for the use for weakly-informative priors on unit scale. I then back-transformed the scaled parameters to recover their values on the original scale.
 
 The model for DO dynamics (eqn X in the main text) is:
@@ -90,7 +93,7 @@ $$
 \frac{y_{t+1}-\mu}{\tau} = \frac{y_t-\mu}{\tau} + \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\phi_t + \frac{\Delta h}{z_{mix}} k_t\left( \frac{y^{eq}_t-\mu}{\tau} - \frac{y_t-\mu}{\tau} \right) + \frac{1}{\tau}\epsilon^{proc}_t. 
 $$
 
-Substituting with nondimesionalized variables yields
+Substituting with scaled variables yields
 
 $$
 x_{t+1} = x_t + \hat{\phi_t} + \hat{k}_t (x^{eq}_t - x_t) + \hat{\epsilon}^{proc}_t
@@ -107,9 +110,10 @@ where
 \end{split}
 \end{equation}
 
-The parameter values on the original scale can be obtained by back-transforming the nondimensionlized values. For example, $\phi_t = \tau\frac{z_{mix}}{\Delta h} \hat{\phi}_t$.
+The parameter values on the original scale can be obtained by back-transforming the scaled values. For example, $\phi_t = \tau\frac{z_{mix}}{\Delta h} \hat{\phi}_t$.
 
 ###GPP and ER
+
 NEP ($\phi_t$) is the difference between GPP and ER. Therefore, the scaling of NEP implies that GPP (denoted $\chi$) and ER (denoted $\kappa$) are scaled as 
 
 \begin{equation}
@@ -152,14 +156,13 @@ This scaling can be applied by direct analogy to ER and to the time varying comp
 
 I fit the model using weakly informative priors based on normal distributions (see http://mc-stan.org/users/documentation/case-studies/weakly_informative_shapes.html). Because the parameters were fit on unit scale, I was generally used priors with standard deviations of 1 and means of 0. However, because the parameters describing the scaling of GPP and ER with temperature ($\gamma_\beta$ and $\gamma_\rho$) had lower bounds of 1, I used corresponding priors with means of 1. For those parameters with lower bounds (1 for $\gamma_\beta$ and $\gamma_\rho$ and 0 for all standard deviations), I used normal priors truncated at their respective lower bounds. 
 
-## Estimating of observation error
+## Estimating observation error
 
-Attempting to estimate the standard deviaitons for observation error ($\sigma_{obs}$) and process error ($\sigma_{proc}$) independently resulted in very inefficient sampling of the posterior distribution as $\sigma_{obs}$ slowly converged to 0. This can be seen by examining the parameter trace plots from the MCMC (Fig \ref{fig:trace}). While $\sigma_{proc}$ showed good mixing across all four chains, the chains for $\sigma_{proc}$ did not mix indicating a lack of convergence. However, the overall magnitude of $\sigma_{obs}$ was close to 0 and the lack of convergence is likely due to difficulties associated with estimating the parameter when near it's boundary.
+Attempting to estimate the standard deviaitons for observation error ($\sigma_{obs}$) and process error ($\sigma_{proc}$) independently resulted in very inefficient sampling of the posterior distribution as $\sigma_{obs}$ slowly converged to 0. This can be seen by examining the parameter trace plots from the MCMC (Fig \ref{fig:trace}). While $\sigma_{proc}$ showed good mixing across all four chains, the chains for $\sigma_{proc}$ did not mix, indicating a lack of convergence. However, the overall magnitude of $\sigma_{obs}$ was close to 0 and the lack of convergence is likely due to difficulties associated with estimating the parameter when near it's boundary.
 
 Therefore, I refit the model fixing $\sigma_{obs}$ to near 0 (1% of the observed standard deviation in obseved DO, so that I could use the same model specification in Stan). This resulted in nearly identical estimates for the parameters (Fig \ref{fig:posts-sig-obs}). 
 
 ```{r trace, echo = FALSE, message = FALSE, cache = FALSE, fig.height=4, fig.width=6, fig.cap="Trace plots for standard deviations of observation and process error from the MCMC. Colors indicate separately initialized chains."}
-# plot
 read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   select("chain","step","sig_obs","sig_proc") %>%
   rename("sigma[obs]" = "sig_obs", "sigma[proc]" = "sig_proc") %>%
@@ -173,8 +176,7 @@ read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   guides(color = F)
 ```
 
-```{r posts-sig-obs, echo = FALSE, message = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Posterior distributions for parameter estimates, with the standard deviation of observation error estimated from data or fixed to 0."}
-# plot
+```{r posts-sig-obs, echo = FALSE, message = FALSE, cache = FALSE, fig.height=6, fig.width=5, fig.cap="Posterior distributions for parameter estimates, with the standard deviation of observation error estimated from data or fixed to 0."}
 read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   select(-"lp__",-"sig_obs") %>%
   mutate(type = "Estimated") %>%
@@ -194,16 +196,102 @@ read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   theme(legend.position="top", legend.direction = "vertical")
 ```
 
-\clearpage
-
 ## Stan specifications and diagnostics
 
 Detailed explanation of code for specifying, fitting, and diagnosing the model with Stan can be found at: 
 
+\clearpage
+
 # Simulations
+
 ## Methods
+
+A main objective of the analysis was to infer the temporal variation in the parameters of the P-I curve ($\beta_d^0$, $\alpha_d$, and $rho_d$), with the magnitude of variation characterized by the standard deviations of the respective stochastic processes ($\sigma_\beta$, $\sigma_\alpha$, and $\sigma_\rho$). To explore the capacity of the model to distinguish real changes in these parameters from noise, I fit the model to simulated data with $\beta_d^0$, $\alpha_d$, and $rho_d$ fixed to their mean values for each year as inferred by the fit of the model to real data. The simulated data implied that $\sigma_\beta$, $\sigma_\alpha$, and $\sigma_\rho$ had “true” values of 0; therefore, the model fit to these data should produce estimates shifted toward 0 relative to the estimates for the actual data. 
+
+The goal was to validate the model as fit to the particular data used in this analysis. Therefore, I constructed the simulated data using the observed environmental data and the particular sequence of process errors (i.e. $\epsilon^{proc}_d$) as inferred from the model fit to the original data. The observed DO for each year had gaps due to missing data, which resulted in many contiguous time-series within each year. For the simulated data, I retained this structure as it could have implications for the efficacy of the model fitting. Initial values for the first time-series in each year were set to the corresponding value in the observed data. However, for the initial values of all subsequent time-series within a year I projected the model as if there were no gap in the data (such that each year would have a single contiguous stretch of observations) and then inserted gaps into the simulated time-series to match the structure of the original data. This is was necessary as using the observed values to initial each time-series would lead to substantial differences between the initial value and the equilibrium determined by metabolism rates when fixed to their means. The real and simulated data appear quite different, indicating that the temporal variation in the ecosystem metabolism parameters has large effects on the DO dynamics (Fig \ref{fig:sim-data}).
+
+Detailed explanation of code for simulated data and corresponding model fit with Stan can be found at: 
+
 ## Results
+
+As discussed in the main text, $\sigma_\beta$, $\sigma_\alpha$, and $\sigma_\rho$ were all clearly different from 0 when estimated from the real data. In contrast, the variance estimates for the simulated data were all strongly right skewed, with posterior densities concentrated near 0 (Fig \ref{fig:sim-post}). This suggests that the temporal variation in $\beta_d^0$, $\alpha_d$, and $rho_d$ inferred by the model reflected real changes in the underlying P-I curve. 
+
+```{r sim-data, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Time-series for real and simualted DO."}
+# plot
+read_csv("simulation/input/beta0_alpha_rho_fixed/data_export.csv") %>%
+  select(year, yday, hour, do) %>%
+  mutate(type = "Simulated",
+         do = do) %>%
+  bind_rows(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+              select(year, yday, hour, do) %>%
+              mutate(type = "Real")) %>%
+  mutate(time = yday + hour/24) %>%
+  ggplot(aes(time, do, color = type))+
+  facet_wrap(~year)+
+  geom_line(alpha = 0.7, size = 0.7)+
+  scale_color_manual("",values=c("forestgreen","black"))+
+  scale_y_continuous(expression(DO~"("*mg~O[2]~L^{-1}*")"))+
+  scale_x_continuous("Day of Year")+
+  theme(legend.position = c(0.9, 0.92))
+```
+
+```{r sim-post, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=4, fig.cap="Time-series for real and simualted DO."}
+# prepare data
+sig_par = read_csv("analyses/model_fit/output/fixed_pars_full.csv") %>%
+  select(sig_b0, sig_a, sig_r) %>%
+  gather(var, value) %>%
+  mutate(type = "Time-Varying") %>%
+  bind_rows(read_csv("simulation/output/beta0_alpha_rho_fixed/fixed_pars_full.csv")  %>%
+              select(sig_b0, sig_a, sig_r) %>%
+              gather(var, value) %>%
+              mutate(type = "Fixed")) 
+
+# create dummy data to set y-axis range
+dummy_lab = data_frame(var = c("sig_b0","sig_a","sig_r"),
+                       label = c("","",""),
+                       value = c(0.2, 0.2, 0.2),
+                       y = c(145, 45, 110))
+
+# create labels
+sig_lab = data_frame(var = c("sig_b0","sig_a","sig_r"),
+                     label = c("sigma[beta]~(max~GPP)", 
+                               "sigma[alpha]~(initial~slope)",
+                               "sigma[rho]~(baseline~ER)"),
+                     value = c(0.2, 0.2, 0.2),
+                     y = 0.9*dummy_lab$y)
+
+# plot
+sig_par %>%
+  ggplot(aes(value))+
+  facet_wrap(~var, labeller = label_parsed, nrow = 3, scales = "free_y")+
+  stat_density(aes(linetype = type), position = "identity", geom = "line")+
+  scale_y_continuous("Posterior Probability Density", breaks = NULL)+
+  scale_x_continuous("Value (Dimensionsless)", breaks = seq(0,0.4,0.1), limits = c(0,0.4))+
+  geom_text(data = dummy_lab, aes(label = label, y = y), position = "identity")+
+  geom_text(data = sig_lab, aes(label = label, y = y), position = "identity", parse = T)+
+  scale_linetype_manual("", values = c(2,1))+
+  theme(legend.position = c(0.75,0.87),
+        strip.text=element_blank())
+```
 
 # Surface vs. average water column PAR
 ## Methods
 ## Results
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
