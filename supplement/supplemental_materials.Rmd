@@ -55,7 +55,7 @@ theme_set(theme_bw() %+replace%
 
 ### NEP
 
-For fitting the model, I z-scored (centered on the mean and divided by the standard deviation) the observed DO concentrations and scaled the model accordingly. I then nondimensionalized the scaled model to remove the scale parameters (mean/standard deviation for the observed DO and mixing depth). This put the observed values and model parameters on unit scale, which improved the computaitonal efficiency and allowed for the use for weakly-informative priors on unit scale. I then back-transformed the scaled parameters to recover their values on the original scale.
+For fitting the model, I z-scored (centered on the mean and divided by the standard deviation) the observed DO concentrations and scaled the model accordingly. I then nondimensionalized the scaled model to remove the scale parameters (mixing depth and mean/standard deviation for the observed DO). This put the observed values and model parameters on unit scale, which improved the computaitonal efficiency and allowed for the use for weakly-informative priors on unit scale. I then back-transformed the scaled parameters to recover their values on the original scale.
 
 The model for DO dynamics (eqn X in the main text) is:
 $$
@@ -111,7 +111,7 @@ where
 \end{split}
 \end{equation}
 
-The parameter values on the original scale can be obtained by back-transforming the scaled values. For example, $\phi_t = \tau\frac{z_{mix}}{\Delta h} \hat{\phi}_t$.
+I fit the nondimensionalized version of the model, resulting in esitmates for the scaled parameters (e.g. $\hat{\phi}_t$). The parameter values on the original scale could be obtained by back-transforming the scaled values. For example, $\phi_t = \tau\frac{z_{mix}}{\Delta h} \hat{\phi}_t$.
 
 ###GPP and ER
 
@@ -130,13 +130,13 @@ $$
 \chi_t = \beta_{d}~\text{tanh} \left( \frac{\alpha_t}{\beta_t}L_t\right)  
 $$ 
 
-where $\beta_t$ is the maximum rate of GPP [$mg~O_2~m^{-3}~h^{-1}$] on a particular day and $\alpha$ [$mg~O_2~s~\mu mol~photons^{-1}~m^{-1}~h^{-1}$] is the rate at which GPP increases with $L_t$. This is scaled as
+where $\beta_t$ is the maximum rate of GPP [$mg~O_2~m^{-3}~h^{-1}$] on a particular day and $\alpha$ [$mg~O_2~s~\mu mol~photons^{-1}~m^{-1}~h^{-1}$] is the initial slope of the P-I at low light. This is scaled as
 
 $$
 \hat{\chi}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\beta_t~\text{tanh} \left( \frac{\frac{\lambda}{\tau}\frac{\Delta h}{z_{mix}}\alpha_t}{\frac{1}{\tau}\frac{\Delta h}{z_{mix}}\beta_t}\frac{L_t}{\lambda}\right)  
 $$ 
 
-where $\lambda$ is the mean light level (so that $\alpha_t$ can be expressed on unit scale). This simplifies to 
+where $\lambda$ is the mean light level (so that the initial slope can be expressed on unit scale). This simplifies to 
 
 $$
 \hat{\chi}_t = \hat{\beta}_t~\text{tanh} \left( \frac{\hat{\alpha}_t}{\hat{\beta}_t}\hat{L}_t\right)  
@@ -155,15 +155,19 @@ This scaling can be applied by direct analogy to ER and to the time varying comp
 
 ## Priors
 
-I fit the model using weakly informative priors based on normal distributions (see http://mc-stan.org/users/documentation/case-studies/weakly_informative_shapes.html). Because the parameters were fit on unit scale, I was generally used priors with standard deviations of 1 and means of 0. However, because the parameters describing the scaling of GPP and ER with temperature ($\gamma_\beta$ and $\gamma_\rho$) had lower bounds of 1, I used corresponding priors with means of 1. For those parameters with lower bounds (1 for $\gamma_\beta$ and $\gamma_\rho$ and 0 for all standard deviations), I used normal priors truncated at their respective lower bounds. 
+I fit the model using weakly informative priors based on normal distributions (see http://mc-stan.org/users/documentation/case-studies/weakly_informative_shapes.html). Because the parameters were fit on unit scale, I generally used priors with standard deviations of 1 and means of 0. However, because the parameters describing the scaling of GPP and ER with temperature ($\gamma_\beta$ and $\gamma_\rho$) had lower bounds of 1, I used corresponding priors with means of 1. For those parameters with lower bounds (1 for $\gamma_\beta$ and $\gamma_\rho$ and 0 for all standard deviations), I used normal priors truncated at their respective lower bounds. 
 
 ## Estimating observation error
 
 Attempting to estimate the standard deviaitons for observation error ($\sigma_{obs}$) and process error ($\sigma_{proc}$) independently resulted in very inefficient sampling of the posterior distribution as $\sigma_{obs}$ slowly converged to 0. This can be seen by examining the parameter trace plots from the MCMC (Fig \ref{fig:trace}). While $\sigma_{proc}$ showed good mixing across all four chains, the chains for $\sigma_{proc}$ did not mix, indicating a lack of convergence. However, the overall magnitude of $\sigma_{obs}$ was close to 0 and the lack of convergence is likely due to difficulties associated with estimating the parameter when near it's boundary.
 
-Therefore, I refit the model fixing $\sigma_{obs}$ to near 0 (1% of the observed standard deviation in obseved DO, so that I could use the same model specification in Stan). This resulted in nearly identical estimates for the parameters (Fig \ref{fig:posts-sig-obs}). 
+Therefore, I refit the model fixing $\sigma_{obs}$ to near 0 (1% of the observed standard deviation in obseved DO, so that I could use the same model specification in Stan). This resulted in nearly identical estimates for most parameters except for $\sigma_{proc}$, which was nontheless very similar (Fig \ref{fig:posts-sig-obs}). 
 
-```{r trace, echo = FALSE, message = FALSE, cache = FALSE, fig.height=4, fig.width=6, fig.cap="Trace plots for standard deviations of observation and process error from the MCMC. Colors indicate separately initialized chains."}
+## Stan specifications and diagnostics
+
+Detailed explanation of code for specifying, fitting, and diagnosing the model with Stan can be found at [].
+
+```{r trace, echo = FALSE, message = FALSE, cache = FALSE, fig.height=4, fig.width=6, fig.cap="Trace plots for standard deviations of observation and process error from the MCMC. Colors indicate separately initialized chains (note the different y-axis scales)."}
 read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   select("chain","step","sig_obs","sig_proc") %>%
   rename("sigma[obs]" = "sig_obs", "sigma[proc]" = "sig_proc") %>%
@@ -177,7 +181,7 @@ read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   guides(color = F)
 ```
 
-```{r posts-sig-obs, echo = FALSE, message = FALSE, cache = FALSE, fig.height=6, fig.width=5, fig.cap="Posterior distributions for parameter estimates, with the standard deviation of observation error estimated from data or fixed to 0."}
+```{r posts-sig-obs, echo = FALSE, message = FALSE, cache = FALSE, fig.height=6, fig.width=5, fig.cap="Posterior distributions for parameter estimates, with the standard deviation of observation error either estimated from data or fixed to 0."}
 read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   select(-"lp__",-"sig_obs") %>%
   mutate(type = "Estimated") %>%
@@ -196,10 +200,6 @@ read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   scale_linetype_manual(expression(sigma[obs]), values=c(1,2))+
   theme(legend.position="top", legend.direction = "vertical")
 ```
-
-## Stan specifications and diagnostics
-
-Detailed explanation of code for specifying, fitting, and diagnosing the model with Stan can be found at: 
 
 \clearpage
 
@@ -366,7 +366,7 @@ alpha_d %>%
   theme(legend.position = c(0.14,0.91))
 ```
 
-# Drivers of maximum GPP
+# Drivers of maximum GPP (Figure)
 
 Maximum GPP at high light $\beta_d^0$ was quite variable, and it was the dominant contributor to variation in overall GPP and NEP. In the main text, I report results from linear models regressing $\beta_d^0$ against daily mean phycocyanin (as a measure of cyanobacterial abundance) and larval midge abundance. Phycocyanin data were available for all days for which there were estimates of $\beta_d^0$, while midge data were only available approximately weekly. Therefore, I fit two models: (1) including phycocyanin for all days, and (2) including both phycocyanin and midge abundance for those days when midge samples were collected. In the main text I show a figure relating $\beta_d^0$ against phycocyanin for all days. Here I show the corresponding figure for those days where midges were samples (Fig \ref{fig:midges}).
 
