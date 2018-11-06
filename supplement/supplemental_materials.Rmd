@@ -161,11 +161,11 @@ I fit the model using weakly informative priors based on normal distributions (s
 
 Attempting to estimate the standard deviaitons for observation error ($\sigma_{obs}$) and process error ($\sigma_{proc}$) independently resulted in very inefficient sampling of the posterior distribution as $\sigma_{obs}$ slowly converged to 0. This can be seen by examining the parameter trace plots from the MCMC (Fig \ref{fig:trace}). While $\sigma_{proc}$ showed good mixing across all four chains, the chains for $\sigma_{proc}$ did not mix, indicating a lack of convergence. However, the overall magnitude of $\sigma_{obs}$ was close to 0 and the lack of convergence is likely due to difficulties associated with estimating the parameter when near it's boundary.
 
-Therefore, I refit the model fixing $\sigma_{obs}$ to near 0 (1% of the observed standard deviation in obseved DO, so that I could use the same model specification in Stan). This resulted in nearly identical estimates for most parameters except for $\sigma_{proc}$, which was nontheless very similar (Fig \ref{fig:posts-sig-obs}). 
+Therefore, I refit the model fixing $\sigma_{obs}$ to near 0 (1% of the observed standard deviation in obseved DO, so that I could use the same model specification in Stan). This resulted in nearly identical estimates for most parameters except for $\sigma_{proc}$, which was nontheless very similar (Fig \ref{fig:posts-sig-obs}). It is not surprising that observation error was so low, given the smooth appearance of the DO time series (Fig \ref{fig:do}).
 
 ## Stan specifications and diagnostics
 
-Detailed explanation of code for specifying, fitting, and diagnosing the model with Stan can be found at [].
+Detailed explanation of code for specifying, fitting, and diagnosing the model with Stan can be found at [will link to GitHub].
 
 ```{r trace, echo = FALSE, message = FALSE, cache = FALSE, fig.height=4, fig.width=6, fig.cap="Trace plots for standard deviations of observation and process error from the MCMC. Colors indicate separately initialized chains (note the different y-axis scales)."}
 read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
@@ -201,6 +201,17 @@ read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
   theme(legend.position="top", legend.direction = "vertical")
 ```
 
+```{r do, echo = FALSE, message = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Observed DO time-series for first six days in 2012."}
+read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+  filter(year == 2013, yday %in% 165:170) %>%
+  ggplot(aes(hour, do))+
+  facet_wrap(~yday)+
+  geom_line(na.rm=T)+
+  geom_point(na.rm=T)+
+  scale_y_continuous(expression(DO~"("*mg~O[2]~L^{-1}*")"))+
+  scale_x_continuous("Hour", breaks = 8*c(0.5:3.5))
+```
+
 \clearpage
 
 # Simulations
@@ -211,7 +222,7 @@ A main objective of the analysis was to infer the temporal variation in the para
 
 The goal was to validate the model as fit to the particular data used in this analysis. Therefore, I constructed the simulated data using the observed environmental data and the particular sequence of process errors (i.e. $\epsilon^{proc}_d$) as inferred from the model fit to the original data. The observed DO for each year had gaps due to missing data, which resulted in many contiguous time-series within each year. For the simulated data, I retained this structure as it could have implications for the efficacy of the model fitting. Initial values for the first time-series in each year were set to the corresponding value in the observed data. However, for the initial values of all subsequent time-series within a year I projected the model as if there were no gap in the data (such that each year would have a single contiguous stretch of observations) and then inserted gaps into the simulated time-series to match the structure of the original data. This is was necessary as using the observed values to initial each time-series would lead to substantial differences between the initial value and the equilibrium determined by metabolism rates when fixed to their means. The real and simulated data appear quite different, indicating that the temporal variation in the ecosystem metabolism parameters has large effects on the DO dynamics (Fig \ref{fig:sim-data}).
 
-Detailed explanation of code for simulated data and corresponding model fit with Stan can be found at: 
+Detailed explanation of code for simulated data and corresponding model fit with Stan can be found at [will link to GitHub]. 
 
 ## Results
 
