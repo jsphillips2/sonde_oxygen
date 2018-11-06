@@ -1,0 +1,294 @@
+---
+fontsize: 12pt
+geometry: margin=1in,letterpaper
+documentclass: article
+mainfont: "Times New Roman"
+graphics: true
+output:
+    bookdown::pdf_document2:
+        fig_caption: yes
+        number_sections: yes
+        template: template.tex
+        latex_engine: xelatex
+        toc: no
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, cache = FALSE}
+# load packages
+suppressPackageStartupMessages({
+  library(knitr)
+  library(bookdown)
+  library(tidyverse)  
+  library(lubridate)
+})
+
+# set directory
+knitr::opts_knit$set(root.dir = normalizePath(".."))
+
+# set theme
+theme_set(theme_bw() %+replace% 
+            theme(panel.grid = element_blank(),
+                  strip.background = element_blank(),
+                  legend.margin = margin(0,0,0,0),
+                  strip.text = element_text(size=10),
+                  legend.text = element_text(size=10),
+                  axis.text=element_text(size=10, color="black"),
+                  axis.title.y=element_text(angle = 90 ,margin=margin(0,15,0,0)),
+                  axis.title.x=element_text(margin=margin(15,0,0,0))))
+
+
+# set paths for main and simulation analyses
+main_path = "model_fit/"
+
+# data
+sonde_data = read_csv(paste0(main_path,"input/sonde_prep.csv"))
+
+# main analysis
+priors = read_csv(paste0(main_path,"input/priors.csv"))
+params_full = read_csv(paste0(main_path,
+                              "output/fixed_pars_full.csv"))
+model_fit = read_csv(paste0(main_path,
+                            "output/summary_clean.csv"))
+```
+
+
+```{r P-I-curves, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Photosynthesis-irradiance (P-I) curves for ecosystem metabolism. The dashed lines illustrate the contribution of each parameter of the P-I curve. The thin lines show P-I curves for a random subset of days at Lake Myvatn as inferred by the model described in the main text, while the thick line shows the P-I curve using the mean parameter values across this subset of days"}
+set.seed(1)
+test = model_fit %>%
+  filter(name %in% c("beta0","rho","alpha")) %>%
+  select(-lower16, -upper84) %>%
+  mutate(middle = middle/1000) %>%
+  spread(name, middle) %>%
+  split(.$index) %>%
+  lapply(function(x){y = data_frame(index = x$index, 
+                                    beta0 = x$beta0, 
+                                    rho = x$rho, 
+                                    alpha = x$alpha,
+                                    light = 1:200, 
+                                    temp = 12)
+  }) %>%
+  bind_rows %>%
+  mutate(nep = beta0*tanh(alpha*light/beta0) - rho) 
+test = test %>% filter(index %in% sample(x= min(test$index):max(test$index), size = 20))
+
+test2 = test %>%
+  summarize(beta0 = median(beta0),
+            rho = median(rho),
+            alpha = median(alpha)) 
+
+test3 = data_frame(beta0 = test2$beta0, rho = test2$rho, alpha = test2$alpha,
+                   temp = 12, light = 1:200) %>%
+  mutate(nep = beta0*tanh(alpha*light/beta0) - rho)
+
+alph_dat = data_frame(light = -10:50, rho = test2$rho, alpha = test2$alpha, nep  = alpha*light - rho)
+resp_dat = data_frame(light = c(-10, 150), nep = -test2$rho)
+bet_dat = data_frame(light = 150, nep = c(-test2$rho, test2$beta0 - test2$rho - 0.01))
+text_d = data_frame(light = c(5, 75, 175),
+                    nep = c(0.05, -0.14, 0.05),
+                    label = c("Initial Slope","ER","Max GPP"))
+
+test  %>%
+  ggplot(aes(light, nep))+
+  geom_line(aes(group = index), alpha = 0.2, size = 0.2)+
+  geom_line(data = test3, size = 0.8)+
+  geom_line(data = alph_dat, linetype = 2)+
+  geom_line(data = resp_dat, linetype = 2)+
+  geom_line(data = bet_dat, linetype = 2)+
+  geom_text(data = text_d, label = text_d$label)+
+  scale_y_continuous(expression(NEP~
+                                  "("*g~O[2]~m^{-2}~day^{-1}*")"))+
+  scale_x_continuous(expression("Light ("*mu*mol~photons~m^{-2}~s^{-1}*")"))
+```
+
+```{r observed-flux, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Observed daily change in DO (with flux to atmosphere removed) and the modeled daily NEP, plotted through time. After accounting for the atmospheric flux, the change in DO is either attributable to the explicitly modeled biological flux (i.e. NEP) or process error."}
+# prepare data
+flux_d = model_fit %>%
+  filter(name %in% c("nep","air")) %>%
+  select(name, day, index, middle) %>%
+  spread(name, middle) %>%
+  arrange(day, index) %>%
+  select(-day, -index) %>%
+  bind_cols(sonde_data %>% 
+              na.omit() %>%
+              arrange(year, yday, hour)) %>%
+  select(year, yday, hour, par_int, do, nep, air) %>%
+  arrange(year, yday, hour) %>%
+  group_by(year, yday) %>%
+  mutate(air = air/3300,
+         nep = nep/3300,
+         flux = c(diff(do), NA) - air) %>%
+  group_by(year, yday) %>%
+  summarize(flux = 24*mean(flux, na.rm=T),
+            nep = 24*mean(nep, na.rm=T)) %>%
+  gather(var, value, flux, nep) %>%
+  mutate(var = factor(var, levels = c("flux","nep"), 
+                      labels = c("Observed","NEP")))
+
+flux_d %>%
+  {ggplot(., aes(yday, value, color = var))+
+      facet_wrap(~year)+
+      geom_line(alpha = 0.7)+
+      scale_color_manual("",values = c("forestgreen","black"))+
+      scale_y_continuous(expression(DO~change~"("*mg~O[2]~L^{-1}~day^{-1}*")"))+
+      scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
+      theme(legend.position = c(0.85, 0.67))}
+```
+
+
+```{r alpha, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Initial slope of the P-I curve as inferred from the model, plotted through time. The lines are the posterior medians, and the shaded regions are the 68% uncertainty intervals matching the coverage of standard errors."}
+# preapre data
+alpha_d = model_fit %>%
+  filter(name %in% c("alpha")) %>%
+  left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day)))
+# plot
+alpha_d %>%
+  ggplot(aes(yday, middle))+
+  facet_wrap(~year)+
+  geom_ribbon(aes(ymin=lower16, ymax=upper84),linetype=0, alpha=0.35)+
+  geom_line(size=0.6)+
+  scale_y_continuous(expression(Initial~Slope~(alpha)~"("*mg~O[2]~s~mu*mol-photons^{-1}~h^{-1}*")"))+
+  scale_x_continuous("Day of Year", breaks = c(160, 190, 220))
+```
+
+```{r beta0-rho, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Maximum GPP and baseline ER (at the reference temperature of 12C) as inferred from the model, plotted through time. The lines are the posterior medians, and the shaded regions are the 68% uncertainty intervals matching the coverage of standard errors."}
+# prepare data
+beta_rho_d = model_fit %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) 
+
+# plot
+beta_rho_d %>%
+ggplot(aes(yday, middle, color=name))+
+  facet_wrap(~year)+
+  geom_ribbon(aes(ymin=lower16, ymax=upper84, fill = name),
+              linetype=0, alpha = 0.3)+
+  geom_line(aes(color=name), size=0.5)+
+  geom_text(data = data_frame(year = 2015, 
+                              yday = 187, 
+                              name = c("beta0","beta0","rho","rho"), 
+                              middle = c(520, 410, 270, 160)), 
+            aes(color = name), 
+            label=c("Max GPP",expression((beta[0])), "Basline ER", expression((rho))), 
+            hjust = 0)+
+  scale_y_continuous(expression(Metabolism~Parameter~"("*mg~O[2]~m^{-2}~h^{-1}*")"))+
+  scale_color_manual("",values=c("dodgerblue","firebrick2"), guide = F)+
+  scale_fill_manual("",values=c("dodgerblue","firebrick2"), guide = F)+
+  scale_x_continuous("Day of Year", breaks = c(170, 200, 230), limits = c(150, 250))
+```
+
+
+```{r gpp-nep-er, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Daily estimates of GPP, ER, and NEP, plotted through time. The lines are the posterior medians, and the shaded regions are the 68% uncertainty intervals matching the coverage of standard errors."}
+model_fit %>%
+  filter(name %in% c("GPP","ER","NEP")) %>%
+  left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+  full_join(sonde_data %>% expand(year,yday,name=c("GPP","ER","NEP"))) %>%
+  mutate(middle = ifelse(name=="ER",-middle,middle)/1000,
+         lower16 = ifelse(name=="ER",-lower16,lower16)/1000,
+         upper84 = ifelse(name=="ER",-upper84,upper84)/1000,
+         name = factor(name, levels=c("GPP","NEP","ER"))) %>%
+         {ggplot(., aes(yday, middle, color = name))+
+             facet_wrap(~year)+
+             geom_hline(yintercept = 0, alpha=0.5, size=0.2)+
+             geom_line(data = . %>% filter(is.na(middle) == F), aes(group = name), size = 0.5, linetype = 3)+
+             geom_ribbon(aes(ymin=lower16, ymax=upper84, fill = name),
+                         linetype=0, alpha = 0.3)+
+             geom_line(aes(color=name), size=0.5)+
+             geom_text(data = data_frame(year = 2015, yday = 190, name = c("GPP","NEP","ER"), middle = c(5,2,-3)), 
+                       aes(label = name), hjust = 0)+
+             scale_color_manual("",values=c("dodgerblue","black","firebrick2"), guide = F)+
+             scale_fill_manual("",values=c("dodgerblue","black","firebrick2"), guide = F)+
+             scale_y_continuous(expression(Metabolism~
+                                             "("*g~O[2]~m^{-2}~day^{-1}*")"), breaks = c(-6, 0, 6))+
+             scale_x_continuous("Day of Year", breaks = c(160, 190, 220))
+         }
+```
+
+```{r gpp-vs-er, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=4, fig.cap="Estimated daily ER plotted against GPP, with the 1-to-1 line. The estimates of ER and GPP include the influence of temperature, which contributes to their correlation (R = 0.73)"}
+model_fit %>%
+  filter(name %in% c("GPP","ER")) %>%
+  left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+  select(-lower16, -upper84) %>%
+  mutate(middle = middle/1000) %>%
+  spread(name, middle) %>%
+  ggplot(aes(GPP, ER))+
+  geom_point(size = 2, alpha = 0.4)+
+  geom_abline(intercept=0, slope=1)+
+  scale_y_continuous(expression(ER~"("*g~O[2]~m^{-2}~day^{-1}*")"), 
+                     limits=c(2,9), breaks=c(3,5.5,8))+
+  scale_x_continuous(expression(GPP~"("*g~O[2]~m^{-2}~day^{-1}*")"), 
+                     limits=c(2,9), breaks=c(3,5.5,8))+
+  coord_equal()+
+  theme(legend.position = c(0.25,0.9), legend.direction = "horizontal")
+```
+
+```{r beta0-vs-rho, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=4, fig.cap="Baseline ER plotted against maximum GPP, with both at the reference temperature of 12C. Each line represents a separate year, with squares indicating the beginning and triangles the end of each series."}
+model_fit %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+  select(-lower16, -upper84) %>%
+  spread(name, middle) %>%
+  ggplot(.,aes(beta0, rho))+
+  geom_path(aes(group=factor(year)), size = 0.6, alpha = 0.7)+
+  geom_point(data=. %>% group_by(year) %>% 
+               summarize(beta0 = beta0[1], rho = rho[1]),
+             size = 2.5, shape = 15)+
+  geom_point(data=. %>% group_by(year) %>% 
+               summarize(beta0 = beta0[length(beta0)], rho = rho[length(rho)]),
+             size = 2.5, shape = 17)+
+  geom_text(data = data_frame(beta0 = c(530,550,369,465,317,795),
+                              rho = c(150,240,300,172,185,250),
+                              label = c(2012, 2013, 2015, 2016, 2017, 2018)),
+            aes(label = label))+ 
+  scale_y_continuous(expression(Baseline~ER~"("*mg~O[2]~m^{-2}~h^{-1}*")"),
+                     breaks = c(150, 200, 250))+
+  scale_x_continuous(expression(Maximum~GPP~"("*mg~O[2]~m^{-2}~h^{-1}*")"),
+                     breaks = c(350, 525, 700))
+```
+
+\clearpage
+
+```{r beta0-phyc, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Maximum GPP inferred from the model and phycocyanin concentration (a cyanobacterial pigment), plotted through time. Both variables are shown as z-scores (centerd on mean and divided by standard deviation)."}
+# prepare data
+beta0_phyc = model_fit %>%
+  filter(name %in% c("beta0")) %>%
+  left_join(sonde_data %>%
+              filter(is.na(unique_day)==F) %>%
+              filter(pcyv < 0.3) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day),
+                        pcyv = mean(pcyv))) %>%
+  select(year, yday, middle, pcyv) %>%
+  rename(beta0 = middle) 
+
+# plot
+beta0_phyc %>%
+  gather(var, val, beta0, pcyv)%>%
+  group_by(var) %>%
+  mutate(val = (val - mean(val, na.rm=T))/sd(val, na.rm=T)) %>%
+  ungroup() %>%
+  mutate(var = factor(var, levels=c("beta0","pcyv"), labels=c("Max GPP", "Phycocyanin"))) %>%
+  ggplot(aes(yday, val, color = var))+
+  facet_wrap(~year)+
+  geom_line()+
+  scale_color_manual("",values = c("black","cyan4"))+
+  scale_y_continuous("Z-Score (dimensionless)", breaks = NULL)+
+  scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
+  theme(legend.position = c(0.15, 0.875))
+```
