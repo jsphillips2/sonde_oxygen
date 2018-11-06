@@ -486,22 +486,23 @@ p = model_fit %>%
               summarize(day = unique(unique_day))) %>%
   select(-lower16, -upper84) %>%
   spread(name, middle) %>%
-  {ggplot(.,aes(beta0, rho))+
-      facet_wrap(~year)+
-      geom_hline(yintercept = mean(.$rho), size = 0.3, linetype = 2)+
-      geom_vline(xintercept = mean(.$beta0), size = 0.2, linetype = 2)+
-      geom_path(aes(group=factor(year)), size = 0.6, alpha = 0.7)+
-      geom_point(data=. %>% group_by(year) %>% 
-                   summarize(beta0 = beta0[1], rho = rho[1]),
-                 size = 2.5, shape = 15)+
-      geom_point(data=. %>% group_by(year) %>% 
-                   summarize(beta0 = beta0[length(beta0)], rho = rho[length(rho)]),
-                 size = 2.5, shape = 17)+
-      scale_y_continuous(expression(baseline~ER~"("*mg~O[2]~m^{-2}~h^{-1}*")"),
-                         breaks = c(150, 200, 250))+
-      scale_x_continuous(expression(max~GPP~"("*mg~O[2]~m^{-2}~h^{-1}*")"),
-                         breaks = c(350, 525, 700))+
-      theme_base}
+  ggplot(.,aes(beta0, rho))+
+  geom_path(aes(group=factor(year)), size = 0.6, alpha = 0.7)+
+  geom_point(data=. %>% group_by(year) %>% 
+               summarize(beta0 = beta0[1], rho = rho[1]),
+             size = 2.5, shape = 15)+
+  geom_point(data=. %>% group_by(year) %>% 
+               summarize(beta0 = beta0[length(beta0)], rho = rho[length(rho)]),
+             size = 2.5, shape = 17)+
+  geom_text(data = data_frame(beta0 = c(530,550,369,465,317,795),
+                              rho = c(150,240,300,172,185,250),
+                              label = c(2012, 2013, 2015, 2016, 2017, 2018)),
+            aes(label = label))+ 
+  scale_y_continuous(expression(Baseline~ER~"("*mg~O[2]~m^{-2}~h^{-1}*")"),
+                     breaks = c(150, 200, 250))+
+  scale_x_continuous(expression(Maximum~GPP~"("*mg~O[2]~m^{-2}~h^{-1}*")"),
+                     breaks = c(350, 525, 700))+
+  theme_base
 
 # examine & export
 p
