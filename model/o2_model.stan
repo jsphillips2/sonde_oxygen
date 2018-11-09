@@ -21,6 +21,7 @@ data {
   real<lower=0> k0; // gas exchange constant 0
   real<lower=0> k1; // gas exchange constant 1
   real<lower=0> k2; // gas exhange constant 2
+  real<lower=0> sig_obs; // observation error sd [g m^-3]
 }
 transformed data {
   // declare variables
