@@ -154,7 +154,6 @@ partition_fun = function(d){
   var_cont = hadamard.prod(d$vcv, d$grad %*% t(d$grad))
   rel_cont = rowSums(var_cont)/sum(var_cont)
   
-  # determine variables to keep (those with non-0 variances)
   # define "slim" matrices (keeping variables with non-0 variances)
   keep = which(rowSums(var_cont) != 0)
   cont_slim = var_cont[keep,keep]
@@ -173,8 +172,6 @@ partition_fun = function(d){
                     scale_sen = t(scale_sen), rel_cont = rel_cont[keep]) %>% tbl_df())
   
 }
-
-partition_fun(nep_grad(years, test))
 
 
 
@@ -247,3 +244,6 @@ nep_part_sum = lapply(c(0.16,0.5,0.84), function(x){
     mutate(quant = x)
 })
 names(nep_part_sum) = c("lower16","middle","upper84")
+
+
+
