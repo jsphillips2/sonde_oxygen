@@ -49,6 +49,93 @@ theme_set(theme_bw() %+replace%
                   axis.title.x=element_text(margin=margin(15,0,0,0))))
 ```
 
+# Data preparation
+
+## Light 
+
+```{r echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
+# import hobo
+hobo = list.files("data/hobo_raw/clean_data", full.names = T) %>%
+  lapply(read_csv) %>%
+  bind_rows()
+
+# weather
+weather = read_csv("data/weather_raw/weather_2010_2018.csv")
+
+# aggregate HOBO by hour
+hobo_hourly = hobo %>%
+  mutate(year = year(date_time),
+         yday = yday(date_time),
+         hour = hour(date_time)) %>%
+  group_by(year, yday, hour) %>%
+  summarize(date_time = min(date_time),
+            lux = mean(lux, na.rm=T)) %>%
+  ungroup()
+
+# aggregate weather by hour
+weather_hourly = weather %>%
+  mutate(year = year(Date_Time),
+         yday = yday(Date_Time),
+         hour = hour(Date_Time)) %>%
+  group_by(year, yday, hour) %>%
+  summarize(date_time = min(Date_Time),
+            temp = mean(temp, na.rm=T),
+            wdir = mean(wdir, na.rm=T),
+            temp = mean(temp, na.rm=T),
+            wspeed = mean(wspeed, na.rm=T),
+            gust = mean(gust, na.rm=T),
+            RADGL = mean(RADGL, na.rm=T)) %>%
+  ungroup()
+
+# combine HOBO and weather data (only keeping necessary variables)
+# divide lux by 54 to roughly convert to PAR
+# multiply RADGL by 4.57 to roughly convert ot PAR
+# Thimijan and Heins 1983.
+hobo_weather = hobo_hourly %>%
+  mutate(par_hobo = lux/54) %>%
+  select(year, yday, hour, par_hobo) %>%
+  full_join(weather_hourly %>%
+              filter(!(year %in% c(2010, 2011, 2014))) %>%
+              mutate(par_weath = 4.57*RADGL) %>%
+              select(year, yday, hour, wspeed, par_weath))
+
+# calculate correlation
+cor_natural = cor.test(hobo_weather$par_hobo, hobo_weather$par_weath)
+cor_log = cor.test(log1p(hobo_weather$par_hobo), log1p(hobo_weather$par_weath))
+```
+
+Light readings were taken either every 15 or 30 minutes (depending on the year) with a light/temperature logger (HOBO Pendant, Onset Computer Corporation, MA, USA) attached to the top of the buoy deploying the sonde; I averaged these data to an hourly scale for further analysis. HOBO loggers measure visible light intensity in lux, which is closely related to the spectral range (400-700nm) used to calculate photosynthetically active radiation (PAR; measured in mol-photons m-2 s-1) (Thimijan and Heins 1983). I also obtained downwelling solar irradiance from the local whether station (in Watts). Following Thimijan and Heins 1983, visibile light intensity and downwelling irradiance can be scalarly converted to photon flux density based on an approximate standard spectrum for sunlight. Specifically, the visible intensity is divided by 54 and downwelling irradiance is multiplied by 4.57. 
+
+When approximately converted to PAR, visibile light intensity and downwelling irradiance were strongly correlated ($r$=0.79 on natural scale and $r$=0.89 on log-log scale; Fig \ref{fig:hobo-weather}). However, when hourly values are plotted through time it appears that downwelling irradiance has higher peaks than the visible intensity (Fig \ref{fig:light-hour}), which makes sense as the donwelling irradiance is calculated using a wider spectral range that visible intensity. 
+
+```{r hobo-weather, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=5, fig.cap="Visible light intensity measured by HOBO logger and downwelling irradiance from weather station, scalarly converted to approximate PAR equivalent."}
+hobo_weather %>%
+  ggplot(aes(par_weath, par_hobo))+
+  geom_point(size = 0.75, alpha = 0.3)+
+  scale_y_continuous(expression("Visible Light Intensity ("*mu*mol~photons~m^{-2}~s^{-1}*")"), 
+                     trans="log1p", 
+                     breaks = c(2, 10, 50, 250, 1250))+
+  scale_x_continuous(expression("Downwelling Irradiance ("*mu*mol~photons~m^{-2}~s^{-1}*")"), trans="log1p", 
+                     breaks = c(2, 10, 50, 250, 1250))+
+  coord_equal()
+```
+
+```{r light-hour, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="PAR equivalent for visible light intensity and downwelling irradiance plotted by hour for 10 days in 2013."}
+hobo_weather %>%
+  filter(year == 2013, yday %in% c(170:180)) %>%
+  rename(`Visible Light`=par_hobo, `Downwelling Irradiance`=par_weath) %>%
+  gather(var, value, `Visible Light`, `Downwelling Irradiance`) %>%
+  mutate(time = yday + hour/24) %>%
+  ggplot(aes(time, value, color = var))+
+  geom_line()+
+  scale_color_manual("",values=c("magenta3","black"))+
+  scale_y_continuous(expression("PAR ("*mu*mol~photons~m^{-2}~s^{-1}*")"), limits=c(0,5000))+
+  scale_x_continuous("Time (days)",breaks=c(171,174,177,180))+
+  theme(legend.position = c(0.75,0.90))
+```
+
+## Sensor drift
+
 # Model fitting
 
 ## Scaling the model
