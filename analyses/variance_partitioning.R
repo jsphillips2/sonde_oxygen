@@ -31,9 +31,9 @@ comb_data = daily %>%
   select(chain,step,year,yday,hour,par_int,temp,beta0,alpha,rho,alpha,gamma_1,gamma_2) %>%
   mutate(temp_ref = mean(temp))
 
-# trim data for efficiency
+# select random subset
 set.seed(1)
-comb_data_slim = comb_data %>%
+comb_data_sub = comb_data %>%
   filter(chain == 1, step %in% sample(1:max(comb_data$step), 500, replace = F)) 
 
 # select years
@@ -47,7 +47,7 @@ years = unique(sonde_data$year)
 #========== Define functions
 #==========
 
-# GPP gradient and VCOV matrix
+# gradient and vcov for GPP
 gpp_grad = function(x){
   
   # vector of mean values
@@ -60,7 +60,7 @@ gpp_grad = function(x){
     beta0*gamma_1^(temp-temp_ref)*tanh((alpha/(beta0*gamma_1^(temp-temp_ref)))*par_int)
   }
   
-  # evaluate at mean value
+  # evaluate model at mean values
   model_mean = par_mean %>% 
   {model(.$beta0,.$alpha,.$gamma_1,.$par_int,.$temp,.$temp_ref)}
   
@@ -68,6 +68,8 @@ gpp_grad = function(x){
   grad_fun <-deriv(~beta0*gamma_1^(temp-temp_ref)*tanh((alpha/(beta0*gamma_1^(temp-temp_ref)))*par_int), 
                    c("beta0","alpha","gamma_1","par_int","temp","temp_ref"), 
                    function(beta0,alpha,gamma_1,par_int,temp,temp_ref){})
+  
+  # evaluate gradient at mean values
   grad = t(attributes(par_mean %>% {grad_fun(.$beta0,.$alpha,.$gamma_1,.$par_int,.$temp,.$temp_ref)})$gradient)
   
   # define variance-covariance matrix
@@ -79,7 +81,7 @@ gpp_grad = function(x){
 
 
 
-# ER gradient and VCOV matrix
+# gradient and vcov for ER
 er_grad = function(x){
   
   # vector of mean values
@@ -92,13 +94,15 @@ er_grad = function(x){
     rho*gamma_2^(temp-temp_ref)
   }
   
-  # evaluate at mean value
+  # evaluate model at mean values
   model_mean = par_mean %>% 
   {model(.$rho, .$gamma_2, .$temp, .$temp_ref)}
   
   # define model gradient
   grad_fun <-deriv(~rho*gamma_2^(temp-temp_ref), c("rho", "gamma_2", "temp", "temp_ref"), 
                    function(rho, gamma_2, temp, temp_ref){})
+  
+  # evaluate gradient at mean values
   grad = t(attributes(par_mean %>% {grad_fun(.$rho, .$gamma_2, .$temp, .$temp_ref)})$gradient)
   
   # define variance-covariance matrix
@@ -110,37 +114,39 @@ er_grad = function(x){
 
 
 
-# NEP gradient and VCOV matrix
+# gradient and vcov for NEP
 nep_grad = function(x){
   
-  # Vector of mean values
+  # vector of mean values
   par_mean = x %>%
     select(beta0, alpha, rho, gamma_1, gamma_2, par_int, temp, temp_ref) %>%
     summarise_all(mean)
   
-  # Define model function
+  # define model function
   model = function(beta0,alpha,rho,gamma_1,gamma_2,par_int,temp,temp_ref){
     beta0*gamma_1^(temp-temp_ref)*tanh((alpha/(beta0*gamma_1^(temp-temp_ref)))*par_int) 
     - rho*gamma_2^(temp-temp_ref)
   }
   
-  # Evaluate at mean value
+  # evaluate model at mean values
   model_mean = par_mean %>% 
   {model(.$beta0,.$alpha,.$rho,.$gamma_1,.$gamma_2,.$par_int,.$temp,.$temp_ref)}
   
-  # Define model gradient
+  # define model gradient
   grad_fun <-deriv(~beta0*gamma_1^(temp-temp_ref)*tanh((alpha/(beta0*gamma_1^(temp-temp_ref)))*par_int) 
                    - rho*gamma_2^(temp-temp_ref), 
                    c("beta0","alpha","rho","gamma_1","gamma_2","par_int","temp","temp_ref"), 
                    function(beta0,alpha,rho,gamma_1,gamma_2,par_int,temp,temp_ref){})
+  
+  # evaluate gradient at mean values
   grad = t(attributes(par_mean %>% 
   {grad_fun(.$beta0,.$alpha,.$rho,.$gamma_1,.$gamma_2,
             .$par_int,.$temp,.$temp_ref)})$gradient)
   
-  # Define variance-covariance matrix
+  # define variance-covariance matrix
   vcv = cov(x %>% select(beta0,alpha,rho,gamma_1,gamma_2,par_int,temp,temp_ref)) 
   
-  # export
+  # return data
   return(list(par_mean = par_mean, model_mean = model_mean, grad = grad, vcv = vcv))
 }
 
@@ -168,6 +174,7 @@ partition_fun = function(d){
   # scale squared sensitivity by total variance
   scale_sen = sen_2/sum(cv_2*sen_2)
   
+  # return data
   return(data.frame(var = names(cv_2), cv_2 = t(cv_2), 
                     scale_sen = t(scale_sen), rel_cont = rel_cont[keep]) %>% tbl_df())
   
@@ -182,7 +189,7 @@ partition_fun = function(d){
 #==========
 
 # partition for each step 
-gpp_part = comb_data_slim %>% 
+gpp_part = comb_data_sub %>% 
   split(.$step) %>%
   lapply(function(x){partition_fun(gpp_grad(x))}) %>%
   bind_rows()
@@ -194,8 +201,10 @@ gpp_part_sum = lapply(c(0.16,0.5,0.84), function(x){
     group_by(var) %>%
     summarize_all(funs(quantile), probs = x) %>%
     mutate(quant = x)
-})
-names(gpp_part_sum) = c("lower16","middle","upper84")
+}) %>% set_names(c("lower16","middle","upper84"))
+
+#examine
+gpp_part_sum
 
 
 
@@ -206,7 +215,7 @@ names(gpp_part_sum) = c("lower16","middle","upper84")
 #==========
 
 # partition for each step 
-er_part = comb_data_slim %>% 
+er_part = comb_data_sub %>% 
   split(.$step) %>%
   lapply(function(x){partition_fun(er_grad(x))}) %>%
   bind_rows()
@@ -218,8 +227,10 @@ er_part_sum = lapply(c(0.16,0.5,0.84), function(x){
     group_by(var) %>%
     summarize_all(funs(quantile), probs = x) %>%
     mutate(quant = x)
-})
-names(er_part_sum) = c("lower16","middle","upper84")
+}) %>% set_names(c("lower16","middle","upper84"))
+
+#examine
+er_part_sum
 
 
 
@@ -230,7 +241,7 @@ names(er_part_sum) = c("lower16","middle","upper84")
 #==========
 
 # partition for each step 
-nep_part = comb_data_slim %>% 
+nep_part = comb_data_sub %>% 
   split(.$step) %>%
   lapply(function(x){partition_fun(nep_grad(x))}) %>%
   bind_rows()
@@ -242,8 +253,10 @@ nep_part_sum = lapply(c(0.16,0.5,0.84), function(x){
     group_by(var) %>%
     summarize_all(funs(quantile), probs = x) %>%
     mutate(quant = x)
-})
-names(nep_part_sum) = c("lower16","middle","upper84")
+}) %>% set_names(c("lower16","middle","upper84"))
+
+#examine
+nep_part_sum
 
 
 
