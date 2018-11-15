@@ -136,6 +136,63 @@ hobo_weather %>%
 
 ## Sensor drift
 
+```{r echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
+
+# read clean sonde data
+sonde = read_csv("data/sonde_final.csv") %>% 
+  # convert hour from 0:23 to 1:24 (this makes indexing easier later)
+  mutate(hour = hour + 1) 
+
+
+# profiles
+profile = read_csv("data/myvatn_profile.csv") %>%
+  filter(sta %in% c(3, 33), sampledepth == 0.5) %>%
+  mutate(year = year(sampledate),
+         yday = yday(sampledate),
+         hour = hour(sampletime)) %>%
+  select(year, yday, hour, do) %>%
+  rename(do_prof = do)
+
+# combine sonde and profile data
+comb_data = sonde %>%
+              select(year, yday, hour, do) %>%
+              rename(do_sonde = do) %>% na.omit() %>%
+  left_join(profile)
+
+# correlation
+cor_do = cor.test(comb_data$do_prof, comb_data$do_sonde)
+```
+
+To evaluate whether the sonde DO readings drifted through time, I compared them to measurments and the same depth (0.5m) and location made with handheld probes (ProODO, YSI Co., OH, USA) during routine sampling of the central monitoring station. The sonde and handheld probe measurements were strongly correalted ($r$=0.92; Fig \ref{fig:sonde-vs-profile}). Furthermore, the DO time-series measured by the sonde failed to display linear trends that were consistent between years (Fig \ref{fig:sonde-profile-time}). Therefore, there did not appear to be any major drift in the sensor readings.
+
+```{r sonde-vs-profile, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="DO measured from the sonde and handheld probes, with the 1-to-1 line." }
+comb_data %>%
+  ggplot(aes(do_prof, do_sonde))+
+  geom_point()+
+  geom_abline(intercept = 0, slope = 1)+
+  scale_y_continuous(expression(Sonde~DO~"("*mg~O[2]~L^{-1}*")"),
+                     limits=c(9.5,13))+
+  scale_x_continuous(expression(Handheld~Probe~DO~"("*mg~O[2]~L^{-1}*")"),
+                     limits=c(9.5,13))+
+  coord_equal()
+```
+
+```{r sonde-profile-time, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="Hourly DO measurements plotted through time. The lines are the sonde measurements, while the points are the handheld probe measurements."}
+comb_data %>%
+  filter(!(year %in% c(2012,2014))) %>%
+  mutate(time = yday + hour/24) %>%
+  ggplot(aes(time, do_sonde))+
+  facet_wrap(~year)+
+  geom_line()+
+  geom_point(aes(y = do_prof), color="red")+
+  scale_y_continuous(expression(DO~"("*mg~O[2]~L^{-1}*")"))+
+  scale_x_continuous("Day of Year")
+```
+
+## Data filtering & processing
+
+Raw data and code for cleaning, processing, and filter data can be found at [will link to GitHub].
+
 # Model fitting
 
 ## Scaling the model
@@ -517,7 +574,9 @@ beta0_phyc_midge %>%
   theme(legend.position = c(0.14, 0.88))
 ```
 
+# References
 
+Thimijan, R. W., and R. D. Heins. 1983. Photometric, Radiometric, and Quantum Light Units of Measure A Review of Procedures for Interconversion. HortScience 18: 5.
 
 
 
