@@ -74,7 +74,7 @@ par_sum = model_fit %>%
 #========== Fig 1: P-I Curve
 #==========
 set.seed(1)
-test = model_fit %>%
+parameters = model_fit %>%
   filter(name %in% c("beta0","rho","alpha")) %>%
   select(-lower16, -upper84) %>%
   mutate(middle = middle/1000) %>%
@@ -89,28 +89,32 @@ test = model_fit %>%
   }) %>%
   bind_rows %>%
   mutate(nep = beta0*tanh(alpha*light/beta0) - rho) 
-test = test %>% filter(index %in% sample(x= min(test$index):max(test$index), size = 20))
+parameters_trim = parameters %>% 
+  filter(index %in% sample(x= min(parameters$index):max(parameters$index), size = 20))
 
-test2 = test %>%
+parameters_summary = parameters_trim %>%
   summarize(beta0 = median(beta0),
             rho = median(rho),
             alpha = median(alpha)) 
 
-test3 = data_frame(beta0 = test2$beta0, rho = test2$rho, alpha = test2$alpha,
-                   temp = 12, light = 1:200) %>%
+curves = data_frame(beta0 = parameters_summary$beta0, rho = parameters_summary$rho, 
+                    alpha = parameters_summary$alpha,
+                    temp = 12, light = 1:200) %>%
   mutate(nep = beta0*tanh(alpha*light/beta0) - rho)
 
-alph_dat = data_frame(light = -10:50, rho = test2$rho, alpha = test2$alpha, nep  = alpha*light - rho)
-resp_dat = data_frame(light = c(-10, 150), nep = -test2$rho)
-bet_dat = data_frame(light = 150, nep = c(-test2$rho, test2$beta0 - test2$rho - 0.01))
+alph_dat = data_frame(light = -10:50, rho = parameters_summary$rho, 
+                      alpha = parameters_summary$alpha, nep  = alpha*light - rho)
+resp_dat = data_frame(light = c(-10, 150), nep = -parameters_summary$rho)
+bet_dat = data_frame(light = 150, nep = c(-parameters_summary$rho, 
+                                          parameters_summary$beta0 - parameters_summary$rho - 0.01))
 text_d = data_frame(light = c(5, 75, 175),
-                    nep = c(0.05, -0.145, 0.05),
+                    nep = c(0.05, -0.14, 0.05),
                     label = c("Initial Slope","ER","Max GPP"))
 
-p = test  %>%
+p = parameters_trim  %>%
   ggplot(aes(light, nep))+
   geom_line(aes(group = index), alpha = 0.2, size = 0.2)+
-  geom_line(data = test3, size = 0.8)+
+  geom_line(data = curves, size = 0.8)+
   geom_line(data = alph_dat, linetype = 2)+
   geom_line(data = resp_dat, linetype = 2)+
   geom_line(data = bet_dat, linetype = 2)+
@@ -118,7 +122,7 @@ p = test  %>%
   scale_y_continuous(expression(NEP~
                                   "("*g~O[2]~m^{-2}~day^{-1}*")"))+
   scale_x_continuous(expression("Light ("*mu*mol~photons~m^{-2}~s^{-1}*")"))+
-  theme_base
+  theme_base()
 
 # examine & export
 p
