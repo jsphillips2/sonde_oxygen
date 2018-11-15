@@ -30,7 +30,7 @@ profile = read_csv("data/myvatn_profile.csv")
 #========== Sonde data
 #==========
 
-# omit sept and oct data
+# omit sept and oct data (since only present in 2017)
 # remove first and last 3 days (likely not in the water)
 sonde_trim = sonde %>%
   mutate(year = year(Date_Time),
