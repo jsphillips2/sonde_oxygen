@@ -191,7 +191,9 @@ comb_data %>%
 
 ## Data filtering & processing
 
-Raw data and code for cleaning, processing, and filter data can be found at [will link to GitHub].
+Raw data and code for cleaning, processing, and filter data can be found at https://github.com/jsphillips2/sonde_oxygen.
+
+\clearpage
 
 # Model fitting
 
@@ -201,7 +203,7 @@ Raw data and code for cleaning, processing, and filter data can be found at [wil
 
 For fitting the model, I z-scored (centered on the mean and divided by the standard deviation) the observed DO concentrations and scaled the model accordingly. I then nondimensionalized the scaled model to remove the scale parameters (mixing depth and mean/standard deviation for the observed DO). This put the observed values and model parameters on unit scale, which improved the computaitonal efficiency and allowed for the use for weakly-informative priors on unit scale. I then back-transformed the scaled parameters to recover their values on the original scale.
 
-The model for DO dynamics (eqn X in the main text) is:
+The model for DO dynamics (eqn 9 in the main text) is:
 $$
 DO_{t+1} = DO_t+ \frac{\Delta h}{z_{mix}} \left(NEP_t+k_t(DO^{eq}_t-DO_t) \right)+\epsilon^{proc}_t
 $$
@@ -309,7 +311,7 @@ Therefore, I refit the model fixing $\sigma_{obs}$ to near 0 (1% of the observed
 
 ## Stan specifications and diagnostics
 
-Detailed explanation of code for specifying, fitting, and diagnosing the model with Stan can be found at [will link to GitHub].
+Detailed explanation of code for specifying, fitting, and diagnosing the model with Stan can be found at https://github.com/jsphillips2/sonde_oxygen.
 
 ```{r trace, echo = FALSE, message = FALSE, cache = FALSE, fig.height=4, fig.width=6, fig.cap="Trace plots for standard deviations of observation and process error from the MCMC. Colors indicate separately initialized chains (note the different y-axis scales)."}
 read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
@@ -366,7 +368,7 @@ A main objective of the analysis was to infer the temporal variation in the para
 
 The goal was to validate the model as fit to the particular data used in this analysis. Therefore, I constructed the simulated data using the observed environmental data and the particular sequence of process errors (i.e. $\epsilon^{proc}_d$) as inferred from the model fit to the original data. The observed DO for each year had gaps due to missing data, which resulted in many contiguous time-series within each year. For the simulated data, I retained this structure as it could have implications for the efficacy of the model fitting. Initial values for the first time-series in each year were set to the corresponding value in the observed data. However, for the initial values of all subsequent time-series within a year I projected the model as if there were no gap in the data (such that each year would have a single contiguous stretch of observations) and then inserted gaps into the simulated time-series to match the structure of the original data. This is was necessary as using the observed values to initial each time-series would lead to substantial differences between the initial value and the equilibrium determined by metabolism rates when fixed to their means. The real and simulated data appear quite different, indicating that the temporal variation in the ecosystem metabolism parameters has large effects on the DO dynamics (Fig \ref{fig:sim-data}).
 
-Detailed explanation of code for simulated data and corresponding model fit with Stan can be found at [will link to GitHub]. 
+Detailed explanation of code for simulated data and corresponding model fit with Stan can be found at https://github.com/jsphillips2/sonde_oxygen. 
 
 ## Results
 
@@ -573,6 +575,8 @@ beta0_phyc_midge %>%
   scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
   theme(legend.position = c(0.14, 0.88))
 ```
+
+\clearpage
 
 # References
 
