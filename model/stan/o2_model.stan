@@ -151,6 +151,7 @@ generated quantities {
   real GPP_mean; // overall mean flux [g m^-2 d^-1]
   real ER_mean; // overall mean flux [g m^-2 d^-1]
   real NEP_mean; // overall mean flux [g m^-2 d^-1]
+  real log_lik[n_obs]; // log-likelihood
   // back-tranformed scaled variables [g m^-2 d^-1]
   for(n in 1:n_obs){
     o2[n] = tau*x[n] + mu;
@@ -160,6 +161,7 @@ generated quantities {
     er[n] = tau*z*kappa[n];
     nep[n] = tau*z*phi[n];
     air[n] = tau*z*nu[n];
+    log_lik[n] = normal_lpdf(x_obs[n]|x_pred[n], sig_obs);
   }
   {
     int pos = 1;
