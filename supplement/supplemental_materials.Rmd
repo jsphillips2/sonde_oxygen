@@ -374,7 +374,7 @@ Detailed explanation of code for simulated data and corresponding model fit with
 
 As discussed in the main text, $\sigma_\beta$, $\sigma_\alpha$, and $\sigma_\rho$ were all clearly different from 0 when estimated from the real data. In contrast, the variance estimates for the simulated data were all strongly right skewed, with posterior densities concentrated near 0 (Fig \ref{fig:sim-post}). This suggests that the temporal variation in $\beta_d^0$, $\alpha_d$, and $rho_d$ inferred by the model reflected real changes in the underlying P-I curve. 
 
-```{r sim-data, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Time-series for real and simualted DO."}
+```{r sim-data, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Posterior distributions for standard deviations of variation in ecosystem metabolism rates for real and simulated data."}
 # plot
 read_csv("simulation/input/beta0_alpha_rho_fixed/data_export.csv") %>%
   select(year, yday, hour, do) %>%
