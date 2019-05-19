@@ -37,10 +37,11 @@ theme_set(theme_bw() %+replace%
                   axis.text=element_text(size=10, color="black"),
                   axis.title.y=element_text(angle = 90 ,margin=margin(0,15,0,0)),
                   axis.title.x=element_text(margin=margin(15,0,0,0))))
+```
 
-
+```{r include=FALSE, cache = FALSE}
 # set paths for main and simulation analyses
-main_path = "model_fit/"
+main_path = "analyses/model_fit/"
 
 # data
 sonde_data = read_csv(paste0(main_path,"input/sonde_prep.csv"))
