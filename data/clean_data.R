@@ -315,7 +315,7 @@ summary(par0_mod)
 
 # add model predictions for light extinction and surface light
 sonde_full_b = sonde_full %>%
-  mutate(ext = predict(ext_mod2, newdata = .),
+  mutate(ext = predict(ext_mod1, newdata = .),
          par0 = predict(par0_mod, newdata = .),
          # calculate light at center of water column
          # assume light varies with depth as PAR(z) = PAR_0*exp(-ext*z)
