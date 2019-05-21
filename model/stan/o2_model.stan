@@ -161,7 +161,7 @@ generated quantities {
     er[n] = tau*z*kappa[n];
     nep[n] = tau*z*phi[n];
     air[n] = tau*z*nu[n];
-    log_lik[n] = normal_lpdf(x_obs[n]|x_pred[n], sig_obs);
+    log_lik[n] = normal_lpdf(x_obs[n]|x[n], sig_obs);
   }
   {
     int pos = 1;

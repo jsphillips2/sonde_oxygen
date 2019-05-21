@@ -13,10 +13,10 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-2)
 
 # specify analysis
-analy = "alt_k"
+input = "main"
 
 # read data
-data = read_rdump(paste0("analyses/model_fit/input/",analy,"/sonde_list.R"))
+data = read_rdump(paste0("analyses/model_fit/input/",input,"/sonde_list.R"))
 
 # set observation error 
 data$sig_obs = 0.01
@@ -34,8 +34,8 @@ data$temp_ref = 12
 #==========
 
 # initial specifications
-model = "o2_model"
-model_path = paste0("model/",model,".stan")
+model = "o2_model_fixed"
+model_path = paste0("model/stan/",model,".stan")
 chains = 4
 iter = 2000
 
@@ -44,11 +44,11 @@ fit = stan(file = model_path, data = data, seed=1, chains = chains, iter = iter)
 
 # summary of fit
 fit_summary = summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>% 
-{as_data_frame(.) %>%
+{as_tibble(.) %>%
     mutate(var = rownames(summary(fit)$summary))}
 
 # check Rhat & n_eff
-fit_summary %>% filter(Rhat > 1.05) %>% select(Rhat, n_eff, var) %>% arrange(-Rhat)
+fit_summary %>% filter(Rhat > 1.01) %>% select(Rhat, n_eff, var) %>% arrange(-Rhat)
 fit_summary %>% filter(n_eff < 0.5*(chains*iter/2)) %>% select(Rhat, n_eff, var) %>% arrange(n_eff) %>%
   mutate(eff_frac = n_eff/(chains*iter/2))
 
@@ -56,6 +56,13 @@ fit_summary %>% filter(n_eff < 0.5*(chains*iter/2)) %>% select(Rhat, n_eff, var)
 check_div(fit)
 check_treedepth(fit)
 check_energy(fit)
+
+# export path
+output = "fixed"
+output_path = paste0("analyses/model_fit/output/",output)
+
+# save model full output
+saveRDS(fit, paste0(output_path,"/fit.rds"))
 
 
 
@@ -68,8 +75,9 @@ check_energy(fit)
 # fixed parameters by step
 fixed_par_v = c("gamma_1","gamma_2","sig_b0","sig_a","sig_r","sig_proc","lp__")
 # fixed_par_v = c("gamma_1","gamma_2","sig_b0","sig_a","sig_r","sig_proc","sig_obs","lp__")
+fixed_par_v = c("gamma_1","gamma_2","sig_proc","lp__")
 fixed_pars = rstan::extract(fit, pars=fixed_par_v) %>%
-  lapply(as_data_frame) %>%
+  lapply(as_tibble) %>%
   bind_cols() %>%
   mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains))
 names(fixed_pars) = c(fixed_par_v,"chain","step")
@@ -106,7 +114,7 @@ fixed_pars %>%
 # beta0 and rho full
 daily_pars = c("beta0","alpha","rho")
 daily = rstan::extract(fit, pars=daily_pars) %>% 
-{lapply(1:length(daily_pars), function(x){y = .[[x]] %>% as_data_frame %>%
+{lapply(1:length(daily_pars), function(x){y = .[[x]] %>% as_tibble %>%
   mutate(chain = rep(1:chains, each = iter/2), step = rep(c(1:(iter/2)), chains)) %>%
   gather(var, value, -chain, -step) %>%
   mutate(day = strsplit(var, "V") %>% map_int(~as.integer(.x[2])),
@@ -125,9 +133,6 @@ fit_clean = fit_summary %>%
                       index, 
                       data$map_days[index])) %>%
   select(name, index, day, middle, lower16, upper84)
-
-# export path
-output_path = paste0("analyses/model_fit/output/",analy)
 
 # export
 # write_csv(fixed_pars, paste0(output_path,"/fixed_pars_full.csv"))

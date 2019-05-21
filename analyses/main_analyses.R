@@ -29,17 +29,16 @@ theme_base = theme_bw()+
 #==========
 
 # set paths for main and simulation analyses
-main_path = "analyses/model_fit/"
+analy = "main"
+main_path = paste0("analyses/model_fit/")
 
 # data
-sonde_data = read_csv(paste0(main_path,"input/sonde_prep.csv"))
+sonde_data = read_csv(paste0(main_path,"input/",analy,"/sonde_prep.csv"))
 
 # main analysis
-priors = read_csv(paste0(main_path,"input/priors.csv"))
-params_full = read_csv(paste0(main_path,
-                              "output/fixed_pars_full.csv"))
-model_fit = read_csv(paste0(main_path,
-                            "output/summary_clean.csv"))
+priors = read_csv(paste0(main_path,"input/",analy,"/priors.csv"))
+params_full = read_csv(paste0(main_path,"output/", analy,"/fixed_pars_full.csv"))
+model_fit = read_csv(paste0(main_path,"output/", analy,"/summary_clean.csv"))
 
 # midges
 midges = read_csv("data/midges.csv")
