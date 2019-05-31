@@ -12,7 +12,7 @@ check_div <- function(fit) {
 }
 
 # Check transitions that ended prematurely due to maximum tree depth limit
-check_treedepth <- function(fit, max_depth = 10) {
+check_treedepth <- function(fit, max_depth) {
   sampler_params <- get_sampler_params(fit, inc_warmup=FALSE)
   treedepths <- do.call(rbind, sampler_params)[,'treedepth__']
   n = length(treedepths[sapply(treedepths, function(x) x == max_depth)])
