@@ -197,7 +197,7 @@ beta_rho_d %>%
                           values=c(1,5,2),
                           guide = F)+
     scale_y_continuous(expression(Metabolism~Parameter~
-                                    "("*g~O[2]~m^{-2}~h^{-1}*")"))+
+                                    "("*mg~O[2]~m^{-2}~h^{-1}*")"))+
     scale_color_manual(values=c("black","white"), guide = F)+
     scale_x_continuous("Day of Year", breaks = c(170, 200, 230), limits = c(150, 250))
 }
