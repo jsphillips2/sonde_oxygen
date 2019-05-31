@@ -49,6 +49,8 @@ theme_set(theme_bw() %+replace%
                   axis.title.x=element_text(margin=margin(15,0,0,0))))
 ```
 
+\clearpage
+
 # Data preparation
 
 ## Light 
@@ -134,6 +136,100 @@ hobo_weather %>%
   theme(legend.position = c(0.75,0.90))
 ```
 
+\clearpage
+
+## Profiles
+
+Profiles for temperature and DO were taken at half-meter intervals across the entire water column depth (3.3m) at the same location as the sonde approximately weekly from 2013-2018. The range of values for temperature (Fig \ref{fig:do-prof}) and DO (Fig \ref{fig:temp-prof}) were used to inform the filtering of the sonde data, as described in the main text.
+
+DO never dropped below 9mg/L and were mostly clustered within 1102 mg/L. These handheld readings do not capture the full range of variation, but given that Mývatn is quite shallow at the sonde location (3.3m), does not show much vertical variation in DO (e.g. Fig \ref{fig:minidot}), and has relatively modest diel variation (e.g. Fig \ref{fig:do}) in the summer due to the extended day length at high latitudes, it seems very unlikely that the values drop substantially below 9mg/L during the summer.
+
+```{r do-prof, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="Histogram of DO profiles"}
+# profiles
+read_csv("data/myvatn_profile.csv") %>%
+  filter(sta %in% c(3, 33)) %>%
+  mutate(year = year(sampledate)) %>%
+  ggplot(aes(do))+
+  facet_wrap(~year)+
+  geom_histogram()+
+  ylab("Count")+
+  xlab(expression(DO~"("*mg~O[2]~L^{-1}*")"))
+```
+
+```{r temp-prof, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="Histogram of temperature profiles"}
+# profiles
+read_csv("data/myvatn_profile.csv") %>%
+  filter(sta %in% c(3, 33)) %>%
+  mutate(year = year(sampledate)) %>%
+  ggplot(aes(wtemp))+
+  facet_wrap(~year)+
+  geom_histogram()+
+  ylab("Count")+
+  xlab(expression(Temperature~(degree~C)))
+```
+
+\clearpage
+
+## Filtering
+
+The DO and temperature data from the sonde had occasional extreme values that were likely erroneous and so were filtered before analysis. To provide an objective method for removing these values, I elimited all DO and temperature observations that were beyond 2 standard deviations of the mean for a given day. While this removed some values that were likely not erroneous, the majority of the elimiated values were quite extreme and very likely erronenous (Figs \ref{fig:do-filter-all} and \ref{fig:do-filter-subset}). Overall, this procedure resulted in the removal of 5.6% of observations.
+
+```{r echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
+
+# import raw sonde data; calculate 1 sd for oxygen and temp
+sonde_raw = list.files("data/sonde_raw/clean_data", full.names = T) %>%
+  lapply(read_csv) %>%
+  bind_rows() %>%
+  mutate(year = year(Date_Time),
+         yday = yday(Date_Time)) %>%
+  filter(!(year == 2017 & Date_Time > "2017-08-19"),
+         is.na(year) == F) %>%
+  group_by(year) %>%
+  filter(yday > min(yday) + 3,
+         yday < max(yday) - 3) %>%
+  group_by(year, yday) %>%
+  filter(LDO > 5, Temp < 18, TurbSC < 200) %>%
+  mutate(LDO_mean = mean(LDO, na.rm=T),
+         LDO_sd = sd(LDO, na.rm=T),
+         Temp_mean = mean(Temp, na.rm=T),
+         Temp_sd = sd(Temp, na.rm=T)) %>%
+  ungroup() %>%
+  mutate(do_filt = ifelse(LDO > LDO_mean + 2*LDO_sd | LDO < LDO_mean - 2*LDO_sd, "out", "in"),
+         temp_filt = ifelse(Temp > Temp_mean + 2*Temp_sd | Temp < Temp_mean - 2*Temp_sd, "out", "in"))
+
+```
+
+```{r do-filter-all, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="DO measurements from the sonde (points), with the ribbons showing the 2 standard deviations above and below the daily means, with the red points showing observations outside these bounds."}
+
+# plot
+sonde_raw %>%
+  ggplot(aes(Date_Time, LDO))+
+  facet_wrap(~year, scales = "free_x")+
+  geom_ribbon(aes(ymin = LDO_mean - 2*LDO_sd, ymax = LDO_mean + 2*LDO_sd),
+              alpha = 0.5, color = "gray50", linetype = 0)+
+  geom_point(aes(color = do_filt), size = 0.3, alpha = 0.5)+
+  scale_color_manual(values=c("gray20","red"),guide=FALSE)+
+  ylab(expression(DO~"("*mg~O[2]~L^{-1}*")"))+
+  xlab("Time")
+```
+
+```{r do-filter-subset, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE,fig.height=5, fig.width=6, fig.cap="DO measurements for a sample of 20 days from the sonde (points), with the ribbons showing the 2 standard deviations above and below the daily means, with the red points showing observations outside these bounds."}
+
+# plot
+sonde_raw  %>%
+  filter(year == 2017, !(yday < 175 | yday > 195)) %>%
+  ggplot(aes(Date_Time, LDO))+
+  facet_wrap(~year)+
+  geom_ribbon(aes(ymin = LDO_mean - 2*LDO_sd, ymax = LDO_mean + 2*LDO_sd),
+              alpha = 0.5, color = "gray50", linetype = 0)+
+  geom_point(aes(color = do_filt), size = 0.5, alpha = 0.5)+
+  scale_color_manual(values=c("gray20","red"),guide=FALSE)+
+  ylab(expression(DO~"("*mg~O[2]~L^{-1}*")"))+
+  xlab("Time")
+```
+
+\clearpage
+
 ## Sensor drift
 
 ```{r echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
@@ -165,7 +261,7 @@ cor_do = cor.test(comb_data$do_prof, comb_data$do_sonde)
 
 To evaluate whether the sonde DO readings drifted through time, I compared them to measurments and the same depth (0.5m) and location made with handheld probes (ProODO, YSI Co., OH, USA) during routine sampling of the central monitoring station. The sonde and handheld probe measurements were strongly correalted ($r$=0.92; Fig \ref{fig:sonde-vs-profile}). Furthermore, the DO time-series measured by the sonde failed to display linear trends that were consistent between years (Fig \ref{fig:sonde-profile-time}). Therefore, there did not appear to be any major drift in the sensor readings.
 
-```{r sonde-vs-profile, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="DO measured from the sonde and handheld probes, with the 1-to-1 line." }
+```{r sonde-vs-profile, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="DO measured from the sonde and handheld probes, with the 1-to-1 line."}
 comb_data %>%
   ggplot(aes(do_prof, do_sonde))+
   geom_point()+
@@ -189,9 +285,103 @@ comb_data %>%
   scale_x_continuous("Day of Year")
 ```
 
-## Data filtering & processing
+\clearpage
 
-Raw data and code for cleaning, processing, and filter data can be found at https://github.com/jsphillips2/sonde_oxygen.
+## Depth variation in DO
+
+To evaluate vertical variation in DO, in 2017 and 2018 we paired the sonde with a miniDOT (Precison Measurement and Engineering, Vista, CA, USA) dissolved oxygen and temperature logger positions 12cm above the sediment surface. The sonde and miniDOTs were calibrated against each other before deploying the sensors. There was some divergence between the sonde and the miniDOT, but overeall they were strongly correlated and therefore the sonde captured a majority of the temporal variation in DO throughout the water column.
+
+```{r minidot, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=4, fig.width=6, fig.cap="DO measurements from sonde (0.5m below surface) and miniDOT (12cm above lake bottom)."}
+read_csv("supplement/supp_data/mini_clean.csv") %>%
+  mutate(yday = yday(datetime),
+         hour = hour(datetime)) %>%
+  filter(yday < 230, site == "st33") %>%
+  mutate(hour = hour + 1) %>%
+  select(site, year, yday, hour, do.pel, do.ben) %>%
+  na.omit() %>%
+  gather(layer, do, do.pel, do.ben) %>%
+  mutate(layer = ifelse(layer == "do.pel", "Sonde (pelagic)", "miniDOT (benthic)")) %>%
+  group_by(site, year, yday, layer) %>%
+  summarize(do = mean(do, na.rm = T)) %>%
+  ggplot(aes(yday, do, color = layer))+
+  facet_wrap(~year)+
+  geom_line(size = 0.8)+
+  scale_color_manual("",values=c("firebrick","dodgerblue"))+
+  scale_fill_manual("",values=c("firebrick","dodgerblue"))+
+  scale_y_continuous(expression(DO~"("*mg~O[2]~L^{-1}*")"))+
+  scale_x_continuous("Day of Year")+
+  theme(legend.position = c(0.65, 0.85))
+```
+
+\clearpage
+
+## Light attenuation
+
+To estimate the light attenuation rate $c_{d,h}$, I regressed observe light attenuation calculated from weekly measurements of PAR at 0.5m depth intervals against turbidity measured simultaneously by the sonde. I then used this regression (R2 = 0.66; Fig \ref{fig:ext-turb}) to predict $c_{d,h}$ from turbidity for each time point in the sonde data.
+
+```{r ext-turb, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=5, fig.width=6, fig.cap="Light attenuation estimated from 0.5m profiles plotted against turbidity measured from the sonde. The line shows the regression fit"}
+
+# extract relevant data
+# replace 0's with the lowest observed value (for upcoming log transformation)
+profile_clean = read_csv("data/myvatn_profile.csv")  %>%
+  filter(sta %in% c(3,33)) %>%
+  mutate(year = year(sampledate), 
+         yday = yday(sampledate),
+         hour = hour(sampletime),
+         light = ifelse(light>0,light,{read_csv("data/myvatn_profile.csv") %>% 
+             filter(light >0)}$light %>% min))
+
+# define function for calculating light extinction
+ext_fun = function(x){
+  if (nrow(x) < 2) {
+    z <- NA
+  } else {
+    m = lm(log(light) ~ sampledepth, data = x)
+    z1 = m$coef[['(Intercept)']]
+    z2 = m$coef[['sampledepth']]
+  }
+  data_frame(sampledate = x$sampledate[1],
+             year = x$year[1], 
+             yday = x$yday[1], 
+             hour = x$hour[1], 
+             par0 = exp(z1),
+             ext = -z2)
+}
+
+# calculate extinction
+ext_data = profile_clean %>% 
+  select(sampledate, year, yday, hour, sampledepth, light) %>%
+  na.omit() %>%
+  split(.$sampledate, .$hour) %>% 
+  map_df(~ ext_fun(.x)) %>%
+  # filter negative values of ext
+  filter(ext > 0) %>%
+  # add PAR (including for times missing in sonde_full)
+  left_join(read_csv("supplement/supp_data/hobo_weather.csv") %>%
+              select(year, yday, hour, par) %>%
+              na.omit()) %>%
+  # add daily averages of turbidity
+  left_join(read_csv("supplement/supp_data/sonde_hourly.csv") %>%
+              group_by(year, yday) %>%
+              summarize(pcyv = mean(pcyv, na.rm=T),
+                        turb = mean(turb, na.rm=T)))
+
+# fit linear model to predict extinction from turbidity
+ext_mod1 = lm(ext ~ turb, data = ext_data)
+
+# generate predicted values
+nd = ext_data %>% expand(turb = c(min(turb, na.rm=T), max(turb, na.rm=T)))
+nd$ext = predict(ext_mod1, newdata = nd)
+
+# plot water extinction coefficient vs turbidity
+ext_data %>%
+  na.omit() %>%
+  ggplot(aes(turb, ext))+
+  geom_point()+
+  geom_line(data = nd)+
+  scale_y_continuous(expression(Light~attenuation~(m^{-1})))+
+  scale_x_continuous("Turbidity (volts)")
+```
 
 \clearpage
 
@@ -299,9 +489,13 @@ where
 
 This scaling can be applied by direct analogy to ER and to the time varying components of $\beta_t$, $\alpha_t$, and $\rho_t$ (main text eqns X-X)
 
+\clearpage
+
 ## Priors
 
 I fit the model using weakly informative priors based on normal distributions (see http://mc-stan.org/users/documentation/case-studies/weakly_informative_shapes.html). Because the parameters were fit on unit scale, I generally used priors with standard deviations of 1 and means of 0. However, because the parameters describing the scaling of GPP and ER with temperature ($\gamma_\beta$ and $\gamma_\rho$) had lower bounds of 1, I used corresponding priors with means of 1. For those parameters with lower bounds (1 for $\gamma_\beta$ and $\gamma_\rho$ and 0 for all standard deviations), I used normal priors truncated at their respective lower bounds. 
+
+\clearpage
 
 ## Estimating observation error
 
@@ -309,12 +503,14 @@ Attempting to estimate the standard deviaitons for observation error ($\sigma_{o
 
 Therefore, I refit the model fixing $\sigma_{obs}$ to near 0 (1% of the observed standard deviation in obseved DO, so that I could use the same model specification in Stan). This resulted in nearly identical estimates for most parameters except for $\sigma_{proc}$, which was nontheless very similar (Fig \ref{fig:posts-sig-obs}). It is not surprising that observation error was so low, given the smooth appearance of the DO time series (Fig \ref{fig:do}).
 
+\clearpage
+
 ## Stan specifications and diagnostics
 
 Detailed explanation of code for specifying, fitting, and diagnosing the model with Stan can be found at https://github.com/jsphillips2/sonde_oxygen.
 
 ```{r trace, echo = FALSE, message = FALSE, cache = FALSE, fig.height=4, fig.width=6, fig.cap="Trace plots for standard deviations of observation and process error from the MCMC. Colors indicate separately initialized chains (note the different y-axis scales)."}
-read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
+read_csv("model/output/sig_obs/fixed_pars_full.csv") %>%
   select("chain","step","sig_obs","sig_proc") %>%
   rename("sigma[obs]" = "sig_obs", "sigma[proc]" = "sig_proc") %>%
   gather(par, value, -chain, -step) %>%
@@ -328,10 +524,10 @@ read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
 ```
 
 ```{r posts-sig-obs, echo = FALSE, message = FALSE, cache = FALSE, fig.height=6, fig.width=5, fig.cap="Posterior distributions for parameter estimates, with the standard deviation of observation error either estimated from data or fixed to 0."}
-read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
+read_csv("model/output/sig_obs/fixed_pars_full.csv") %>%
   select(-"lp__",-"sig_obs") %>%
   mutate(type = "Estimated") %>%
-  bind_rows(read_csv("analyses/model_fit/output/fixed_pars_full.csv") %>%
+  bind_rows(read_csv("model/output/main/fixed_pars_full.csv") %>%
   select(-"lp__") %>%
   mutate(type = "Fixed to 0")) %>%
   rename("gamma[beta]" = "gamma_1", "gamma[rho]" = "gamma_2",
@@ -348,7 +544,7 @@ read_csv("analyses/model_fit/output/sig_obs/fixed_pars_full.csv") %>%
 ```
 
 ```{r do, echo = FALSE, message = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Observed DO time-series for first six days in 2012."}
-read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+read_csv("model/input/main/sonde_prep.csv") %>%
   filter(year == 2013, yday %in% 165:170) %>%
   ggplot(aes(hour, do))+
   facet_wrap(~yday)+
@@ -360,83 +556,131 @@ read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
 
 \clearpage
 
-# Simulations
+# Alternative parameterizations of k
 
-## Methods
+The characterize exchange of oxygen between the water and atmosphere (main text equation 11), I used to alternative parameterizations of the piston velocity $k_{d,h}$, following Cole and Caraco (1998) and Cruisius and Wanninkhof (2003). Both approches use the same functional form (main text equation 12), but with different values for the constants. Specifically, Cole and Caraco (1998) used the values $k_{0} = 2.07$, $k_{1} = 0.215$, and $k_{2} = 1.7$, while Cruisius and Wanninkhof (2003) used $k_{0} = 0.168$, $k_{1} = 0.228$, and $k_{2} = 2.2$. 
 
-A main objective of the analysis was to infer the temporal variation in the parameters of the P-I curve ($\beta_d^0$, $\alpha_d$, and $rho_d$), with the magnitude of variation characterized by the standard deviations of the respective stochastic processes ($\sigma_\beta$, $\sigma_\alpha$, and $\sigma_\rho$). To explore the capacity of the model to distinguish real changes in these parameters from noise, I fit the model to simulated data with $\beta_d^0$, $\alpha_d$, and $rho_d$ fixed to their mean values for each year as inferred by the fit of the model to real data. The simulated data implied that $\sigma_\beta$, $\sigma_\alpha$, and $\sigma_\rho$ had “true” values of 0; therefore, the model fit to these data should produce estimates shifted toward 0 relative to the estimates for the actual data. 
+While the alternative parameterizations resulted of $k_{d,h}$ resulted in very different estimates of the exchange of oxygen between the water and atmosphere, the estimates of NEP were very similar (Fig (Fig \ref{fig:flux-k}). Consequently, the parameters of the P-I curve also had very similar estimates between the two methods (Figs \ref{fig:beta0-rho-k} and \ref{fig:alpha-k}). 
 
-The goal was to validate the model as fit to the particular data used in this analysis. Therefore, I constructed the simulated data using the observed environmental data and the particular sequence of process errors (i.e. $\epsilon^{proc}_d$) as inferred from the model fit to the original data. The observed DO for each year had gaps due to missing data, which resulted in many contiguous time-series within each year. For the simulated data, I retained this structure as it could have implications for the efficacy of the model fitting. Initial values for the first time-series in each year were set to the corresponding value in the observed data. However, for the initial values of all subsequent time-series within a year I projected the model as if there were no gap in the data (such that each year would have a single contiguous stretch of observations) and then inserted gaps into the simulated time-series to match the structure of the original data. This is was necessary as using the observed values to initial each time-series would lead to substantial differences between the initial value and the equilibrium determined by metabolism rates when fixed to their means. The real and simulated data appear quite different, indicating that the temporal variation in the ecosystem metabolism parameters has large effects on the DO dynamics (Fig \ref{fig:sim-data}).
+```{r echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
+# prepare data
+flux_d <- lapply(list("main","alt_k"), 
+                 function(x){read_csv(paste0("model/output/",x,"/summary_clean.csv")) %>%
+                     filter(name %in% c("nep","air")) %>%
+                     select(name, day, index, middle) %>%
+                     spread(name, middle) %>%
+                     arrange(day, index) %>%
+                     select(-day, -index) %>%
+                     bind_cols(read_csv(paste0("model/input/",x,"/sonde_prep.csv")) %>% 
+                                 na.omit() %>%
+                                 arrange(year, yday, hour)) %>%
+                     select(year, yday, hour, do, nep, air) %>%
+                     group_by(year, yday) %>%
+                     summarize(nep = 24*mean(nep, na.rm=T)/330,
+                               air = 24*mean(air, na.rm=T)/330) %>%
+                     gather(var, value, nep, air) %>%
+                     mutate(analysis = x)}) %>% 
+  bind_rows() %>%
+  mutate(analysis = ifelse(analysis=="alt_k","Crusius & Wanninkhof","Cole & Caraco"),
+         analysis = factor(analysis, levels = c("Crusius & Wanninkhof","Cole & Caraco")),
+         var = ifelse(var=="air","EXC","NEP"))
 
-Detailed explanation of code for simulated data and corresponding model fit with Stan can be found at https://github.com/jsphillips2/sonde_oxygen. 
-
-## Results
-
-As discussed in the main text, $\sigma_\beta$, $\sigma_\alpha$, and $\sigma_\rho$ were all clearly different from 0 when estimated from the real data. In contrast, the variance estimates for the simulated data were all strongly right skewed, with posterior densities concentrated near 0 (Fig \ref{fig:sim-post}). This suggests that the temporal variation in $\beta_d^0$, $\alpha_d$, and $rho_d$ inferred by the model reflected real changes in the underlying P-I curve. 
-
-```{r sim-data, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Posterior distributions for standard deviations of variation in ecosystem metabolism rates for real and simulated data."}
-# plot
-read_csv("simulation/input/beta0_alpha_rho_fixed/data_export.csv") %>%
-  select(year, yday, hour, do) %>%
-  mutate(type = "Simulated",
-         do = do) %>%
-  bind_rows(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
-              select(year, yday, hour, do) %>%
-              mutate(type = "Real")) %>%
-  mutate(time = yday + hour/24) %>%
-  ggplot(aes(time, do, color = type))+
-  facet_wrap(~year)+
-  geom_line(alpha = 0.7, size = 0.5)+
-  scale_color_manual("",values=c("forestgreen","black"))+
-  scale_y_continuous(expression(DO~"("*mg~O[2]~L^{-1}*")"))+
-  scale_x_continuous("Day of Year")+
-  theme(legend.position = c(0.9, 0.92))
 ```
 
-```{r sim-post, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=4, fig.cap="Time-series for real and simualted DO."}
+```{r flux-k, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Daily Net ecosystem production (NEP) and oxygen exchange with atmosphere (EXC) estimated using piston velocities from either Cole and Caraco (1998) and Cruisius and Wanninkhof (2003). Values are defined with respect to the water column (i.e negative values indicate a decrease in water column DO)."}
 # prepare data
-sig_par = read_csv("analyses/model_fit/output/fixed_pars_full.csv") %>%
-  select(sig_b0, sig_a, sig_r) %>%
-  gather(var, value) %>%
-  mutate(type = "Time-Varying") %>%
-  bind_rows(read_csv("simulation/output/beta0_alpha_rho_fixed/fixed_pars_full.csv")  %>%
-              select(sig_b0, sig_a, sig_r) %>%
-              gather(var, value) %>%
-              mutate(type = "Fixed")) 
+flux_d %>%
+  filter(!(var %in% c("flux","error"))) %>%
+  ggplot(aes(yday, value, color = analysis, linetype = var))+
+  facet_wrap(~year)+
+  geom_line(size = 0.5)+
+  geom_hline(yintercept = 0, size = 0.3, alpha = 0.5)+
+  scale_color_manual("",values=c("firebrick","dodgerblue"))+
+  scale_linetype_discrete("")+
+  scale_y_continuous(expression(Daily~DO~Flux~"("*mg~O[2]~m^{-2}~d^{-1}*")"))+
+  scale_x_continuous("Day of Year", breaks = c(170, 200, 230), limits = c(150, 250))+
+  theme(legend.position = "top")
+```
 
-# create dummy data to set y-axis range
-dummy_lab = data_frame(var = c("sig_b0","sig_a","sig_r"),
-                       label = c("","",""),
-                       value = c(0.2, 0.2, 0.2),
-                       y = c(145, 45, 110))
+```{r beta0-rho-k, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Ecosystem metabolism rates estimated using piston velocities from either Cole and Caraco (1998) and Cruisius and Wanninkhof (2003)."}
 
-# create labels
-sig_lab = data_frame(var = c("sig_b0","sig_a","sig_r"),
-                     label = c("sigma[beta]~(max~GPP)", 
-                               "sigma[alpha]~(initial~slope)",
-                               "sigma[rho]~(baseline~ER)"),
-                     value = c(0.2, 0.2, 0.2),
-                     y = 0.9*dummy_lab$y)
+# prepare data
+beta_rho_d = read_csv("model/output/main/summary_clean.csv") %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(read_csv("model/input/main/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+  mutate(type = "Cole & Caraco") %>%
+  bind_rows(read_csv("model/output/alt_k/summary_clean.csv") %>%
+  filter(name %in% c("beta0","rho")) %>%
+  left_join(read_csv("model/input/alt_k/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+    mutate(type = "Crusius & Wanninkhof"))
 
 # plot
-sig_par %>%
-  ggplot(aes(value))+
-  facet_wrap(~var, labeller = label_parsed, nrow = 3, scales = "free_y")+
-  stat_density(aes(linetype = type), position = "identity", geom = "line")+
-  scale_y_continuous("Posterior Probability Density", breaks = NULL)+
-  scale_x_continuous("Value (Dimensionsless)", breaks = seq(0,0.4,0.1), limits = c(0,0.4))+
-  geom_text(data = dummy_lab, aes(label = label, y = y), position = "identity")+
-  geom_text(data = sig_lab, aes(label = label, y = y), position = "identity", parse = T)+
-  scale_linetype_manual("", values = c(2,1))+
-  theme(legend.position = c(0.75,0.87),
-        strip.text=element_blank())
+beta_rho_d %>%
+  ggplot(aes(yday, middle, color=name))+
+  facet_wrap(~year)+
+  geom_line(aes(linetype = type, size = type), alpha = 0.7)+
+  geom_text(data = tibble(year = 2015, yday = 187, 
+                              name = c("beta0","rho"), 
+                              middle = c(490, 240)), 
+            aes(color = name), 
+            label=c("Max GPP", "Basline ER"), 
+            hjust = 0)+
+    geom_text(data = tibble(year = 2015, yday = 187, 
+                              name = c("beta0","rho"), 
+                              middle = c(410,160)), 
+            aes(color = name), 
+            label=c("(beta^0)", "(rho)"), parse = T, 
+            hjust = 0)+
+  scale_y_continuous(expression(Metabolism~Parameter~"("*mg~O[2]~m^{-2}~h^{-1}*")"))+
+  scale_color_manual("",values=c("dodgerblue","firebrick2"), guide = F)+
+  scale_linetype_manual("",values=c(2,1))+
+  scale_size_manual(values=c(0.7, 0.4))+
+  scale_x_continuous("Day of Year", breaks = c(170, 200, 230), limits = c(150, 250))+
+  guides(size = F)+
+  theme(legend.position = "top")
+```
+
+```{r alpha-k, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Initial slope of the P-I curve estimated using piston velocities from either Cole and Caraco (1998) and Cruisius and Wanninkhof (2003)."}
+
+# prepare data
+alpha_d = read_csv("model/output/main/summary_clean.csv") %>%
+  filter(name %in% c("alpha")) %>%
+  left_join(read_csv("model/input/main/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+  mutate(type = "Cole & Caraco") %>%
+  bind_rows(read_csv("model/output/alt_k/summary_clean.csv") %>%
+  filter(name %in% c("alpha")) %>%
+  left_join(read_csv("model/input/alt_k/sonde_prep.csv") %>%
+              filter(is.na(unique_day)==F) %>%
+              group_by(year, yday) %>%
+              summarize(day = unique(unique_day))) %>%
+    mutate(type = "Crusius & Wanninkhof"))
+
+# plot
+alpha_d %>%
+  filter(name %in% c("alpha")) %>%
+  ggplot(aes(yday, middle))+
+  facet_wrap(~year)+
+  geom_line(aes(linetype = type, size = type), alpha = 0.7)+
+  scale_linetype_manual("",values=c(2,1))+
+  scale_size_manual(values=c(0.7, 0.4))+
+  scale_y_continuous(expression(Initial~Slope~(alpha)~"("*mg~O[2]~s~mu*mol-photons^{-1}~h^{-1}*")"))+
+  scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
+  guides(size = F)+
+  theme(legend.position = "top")
 ```
 
 \clearpage
 
 # Surface vs. average water column PAR
-
-## Methods
 
 Because primary production occurs throughout the water column and in the benthos, I fit the model using the average water column light, calcualted as 
 
@@ -449,23 +693,21 @@ where $z$ [$m$] is the vertical position in the water column, $z_{max}$ is the w
 
 The estimates $\overline{L_{d,h}(z)}$ have some uncertainty to do the inference of water clarity from turbidity. Furthermore, it is common in other studies of ecosystem metaboslim to use light as measured near the water surface. To evaluate the consequences of using $\overline{L_{d,h}(z)}$, I refit the model to surface light ($L^0_{d,h}$) and compared the estimates of the time-varying parameters to those for the original model fit. 
 
-## Results
-
 The estimates of baseline ER and maximum GPP were almost identical for both surface and water column light, as they should be given that they characterize metabolism when light is 0 (i.e. when surface and water column light are the same) and when light is saturating (i.e. when differences between surface and water column later are irrelevant) (Fig \ref{fig:beta0-rho}). The average value of the initial slope of the P-I curve was substantially lower for the model fit using surface light, which again was as expected since the surface light values were always higher than the water column values (Fig \ref{fig:alpha}). However, the temporal patterns were very similar, with the largest differences being relatively high values in 2015 and 2018 when using the water column light. These two years had substantial declines in water column light due to reduced water clarity associated with cyanobacterial blooms. 
 
 ```{r beta0-rho, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Ecosystem metabolism rates estimated using either surface or average water column light."}
 
 # prepare data
-beta_rho_d = read_csv("analyses/model_fit/output/summary_clean.csv") %>%
+beta_rho_d = read_csv("model/output/main/summary_clean.csv") %>%
   filter(name %in% c("beta0","rho")) %>%
-  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+  left_join(read_csv("model/input/main/sonde_prep.csv") %>%
               filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
               summarize(day = unique(unique_day))) %>%
   mutate(type = "Water Column") %>%
-  bind_rows(read_csv("analyses/model_fit/output/surface_par/summary_clean.csv") %>%
+  bind_rows(read_csv("model/output/surface_par/summary_clean.csv") %>%
   filter(name %in% c("beta0","rho")) %>%
-  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+  left_join(read_csv("model/input/surface_par/sonde_prep.csv") %>%
               filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
               summarize(day = unique(unique_day))) %>%
@@ -476,11 +718,17 @@ beta_rho_d %>%
   ggplot(aes(yday, middle, color=name))+
   facet_wrap(~year)+
   geom_line(aes(linetype = type, size = type), alpha = 0.7)+
-  geom_text(data = data_frame(year = 2015, yday = 187, 
-                              name = c("beta0","beta0","rho","rho"), 
-                              middle = c(490, 410, 240, 160)), 
+  geom_text(data = tibble(year = 2015, yday = 187, 
+                              name = c("beta0","rho"), 
+                              middle = c(490, 240)), 
             aes(color = name), 
-            label=c("Max GPP",expression((beta^0)), "Basline ER", expression((rho))), 
+            label=c("Max GPP", "Basline ER"), 
+            hjust = 0)+
+    geom_text(data = tibble(year = 2015, yday = 187, 
+                              name = c("beta0","rho"), 
+                              middle = c(410,160)), 
+            aes(color = name), 
+            label=c("(beta^0)", "(rho)"), parse = T, 
             hjust = 0)+
   scale_y_continuous(expression(Metabolism~Parameter~"("*mg~O[2]~m^{-2}~h^{-1}*")"))+
   scale_color_manual("",values=c("dodgerblue","firebrick2"), guide = F)+
@@ -494,16 +742,16 @@ beta_rho_d %>%
 ```{r alpha, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Initial slope of the P-I curve estimated using either surface or average water column light."}
 
 # prepare data
-alpha_d = read_csv("analyses/model_fit/output/summary_clean.csv") %>%
+alpha_d = read_csv("model/output/main/summary_clean.csv") %>%
   filter(name %in% c("alpha")) %>%
-  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+  left_join(read_csv("model/input/main/sonde_prep.csv") %>%
               filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
               summarize(day = unique(unique_day))) %>%
   mutate(type = "Water Column") %>%
-  bind_rows(read_csv("analyses/model_fit/output/surface_par/summary_clean.csv") %>%
+  bind_rows(read_csv("model/output/surface_par/summary_clean.csv") %>%
   filter(name %in% c("alpha")) %>%
-  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+  left_join(read_csv("model/input/surface_par/sonde_prep.csv") %>%
               filter(is.na(unique_day)==F) %>%
               group_by(year, yday) %>%
               summarize(day = unique(unique_day))) %>%
@@ -523,6 +771,8 @@ alpha_d %>%
   theme(legend.position = c(0.14,0.91))
 ```
 
+\clearpage
+
 # Drivers of maximum GPP (Figure)
 
 Maximum GPP at high light $\beta_d^0$ was quite variable, and it was the dominant contributor to variation in overall GPP and NEP. In the main text, I report results from linear models regressing $\beta_d^0$ against daily mean phycocyanin (as a measure of cyanobacterial abundance) and larval midge abundance. Phycocyanin data were available for all days for which there were estimates of $\beta_d^0$, while midge data were only available approximately weekly. Therefore, I fit two models: (1) including phycocyanin for all days, and (2) including both phycocyanin and midge abundance for those days when midge samples were collected. In the main text I show a figure relating $\beta_d^0$ against phycocyanin for all days. Here I show the corresponding figure for those days where midges were samples (Fig \ref{fig:midges}).
@@ -530,9 +780,9 @@ Maximum GPP at high light $\beta_d^0$ was quite variable, and it was the dominan
 ```{r midges, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Time-series of maximum GPP (as inferred from the model), phycocyanin, and midge larva."}
 
 # prepare beta0 and phycocyanin data
-beta0_phyc = read_csv("analyses/model_fit/output/summary_clean.csv") %>%
+beta0_phyc = read_csv("model/output/main/summary_clean.csv") %>%
   filter(name %in% c("beta0")) %>%
-  left_join(read_csv("analyses/model_fit/input/sonde_prep.csv") %>%
+  left_join(read_csv("model/input/main/sonde_prep.csv") %>%
               filter(is.na(unique_day)==F) %>%
               filter(pcyv < 0.3) %>%
               group_by(year, yday) %>%
@@ -566,12 +816,13 @@ beta0_phyc_midge %>%
   group_by(var) %>%
   mutate(val = (val - mean(val, na.rm=T))/sd(val, na.rm=T)) %>%
   ungroup() %>%
-  mutate(var = factor(var, levels=c("beta0","pcyv","midges"), labels=c("Max GPP", "Phycocyanin", "Midges"))) %>%
+  mutate(var = factor(var, 
+                      levels=c("beta0","pcyv","midges"), labels=c("Max GPP", "Phycocyanin", "Midges"))) %>%
   ggplot(aes(yday, val, color = var))+
   facet_wrap(~year)+
   geom_line()+
   scale_color_manual("",values = c("black","cyan4","magenta4"))+
-  scale_y_continuous("Z-Score (dimensionless)", breaks = NULL)+
+  scale_y_continuous("Z-Score (dimensionless)")+
   scale_x_continuous("Day of Year", breaks = c(160, 190, 220))+
   theme(legend.position = c(0.14, 0.88))
 ```
@@ -579,6 +830,10 @@ beta0_phyc_midge %>%
 \clearpage
 
 # References
+
+Cole, J. J., and N. F. Caraco. 1998. Atmospheric exchange of carbon dioxide in a low-wind oligotrophic lake measured by the addition of SF6. Limnology and Oceanography. 43: 647–656. doi:10.4319/lo.1998.43.4.0647
+
+Crusius, J., and R. Wanninkhof. 2003. Gas transfer velocities measured at low wind speed over a lake. Limnology and Oceanography 48: 1010–1017. doi:10.4319/lo.2003.48.3.1010
 
 Thimijan, R. W., and R. D. Heins. 1983. Photometric, Radiometric, and Quantum Light Units of Measure A Review of Procedures for Interconversion. HortScience 18: 5.
 
