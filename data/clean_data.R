@@ -120,6 +120,7 @@ sonde_hourly  %>%
   geom_point(size = 0.5)+
   theme_bw()
 
+# write_csv(sonde_hourly, "supplement/supp_data/sonde_hourly.csv")
 
 
 
@@ -208,6 +209,8 @@ hobo_weather %>%
 
 hobo_weather = hobo_weather %>%
   mutate(par = ifelse(is.na(par_hobo)==F, par_hobo, par_weath))
+
+# write_csv(hobo_weather, "supplement/supp_data/hobo_weather.csv")
 
 
 
