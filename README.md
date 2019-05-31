@@ -18,10 +18,8 @@ The model is fit in a Bayesian framework using Stan, run from R using the 'rstan
 
 * `data`: Raw data files and code for processing data.
 
-* `analyses`: Primary analyses, including code for fitting the model using Stan.
+* `analyses`: Primary analyses, including code for figures, variance partitioning, and additional calculaitons.
 
-* `model`: Files for specifying the model in Stan. The version `o2_model.stan` takes the obervation error standard deviation as an input (set to a low value), while `o2_model_sig_obs.stan` estimates the standard deviation from the data.
-
-* `simulations`: Code for generating simulated data and fitting the model to those data.
+* `model`: Files for specifying and fitting the model in Stan. Different input and output folders (`alt_k`,`fixed`,`main`,`sig_obs`, and `surface_par`) correspond to various model fits, differing either due to the input data add/or the Stan file used to specify the model.  All of the model fits can be run from the file `fit_model.R`. The folder `stan` contains files specifying the structure of different versions of the model.  The file `o2_model.stan` specifies the model used for the main analysis, including temporal variation in the parameters of the photosynthesis-irradiance curve and takes the obervation error standard deviation as an input (set to a low value). The file  `o2_model_sig_obs.stan` is identical to `o2_model.stan`, except that it includes the observation error standard deviation as a parameter to estimate from the data. The file  `o2_model_fixed.stan` fits the model with the parameters of the photosynthesis-irriadiance curve fixed through time.
 
 * `supplement`: Rmd file for generaitng supplementary materials associated with manuscript.   
