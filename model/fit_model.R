@@ -42,7 +42,7 @@ model <- if(analysis=="main"|analysis=="surface_par"|analysis=="alt_k"){"o2_mode
 # model path
 model_path <- paste0("model/stan/",model)
 
-# MCMC specificaiotns
+# MCMC specifications
 chains <- 4
 iter <- 2000
 adapt_delta <- 0.8
