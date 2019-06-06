@@ -13,7 +13,8 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-2)
 
 # specify analysis
-analysis <- "main"
+analysis_list <- c("main","surface_par","alt_k","sig_obs","fixed")
+analysis <- analysis_list[1] 
 
 # read data
 data <- read_rdump(paste0("model/input/",analysis,"/sonde_list.R"))
