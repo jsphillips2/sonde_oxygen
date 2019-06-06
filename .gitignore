@@ -40,3 +40,5 @@ vignettes/*.pdf
 *.pdf
 main_analysis/analysis/figures/
 .RDataTmp
+chem.rtf
+chem.R
