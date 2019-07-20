@@ -566,38 +566,33 @@ While the alternative parameterizations resulted of $k_{d,h}$ resulted in very d
 # prepare data
 flux_d <- lapply(list("main","alt_k"), 
                  function(x){read_csv(paste0("model/output/",x,"/summary_clean.csv")) %>%
-                     filter(name %in% c("nep","air")) %>%
-                     select(name, day, index, middle) %>%
-                     spread(name, middle) %>%
-                     arrange(day, index) %>%
-                     select(-day, -index) %>%
-                     bind_cols(read_csv(paste0("model/input/",x,"/sonde_prep.csv")) %>% 
-                                 na.omit() %>%
-                                 arrange(year, yday, hour)) %>%
-                     select(year, yday, hour, do, nep, air) %>%
-                     group_by(year, yday) %>%
-                     summarize(nep = 24*mean(nep, na.rm=T)/330,
-                               air = 24*mean(air, na.rm=T)/330) %>%
-                     gather(var, value, nep, air) %>%
+                     filter(name %in% c("NEP","AIR")) %>%
+                     left_join(read_csv(paste0("model/input/",x,"/sonde_prep.csv")) %>%
+                                 filter(is.na(unique_day)==F) %>%
+                                 group_by(year, yday) %>%
+                                 summarize(day = unique(unique_day))) %>%
+                     full_join(read_csv(paste0("model/input/",x,"/sonde_prep.csv")) %>%
+                                 expand(year,yday,name=c("NEP","AIR"))) %>%
+                     mutate(middle = middle/1000,
+                            name = factor(name, levels=c("NEP","AIR"))) %>%
                      mutate(analysis = x)}) %>% 
   bind_rows() %>%
   mutate(analysis = ifelse(analysis=="alt_k","Crusius & Wanninkhof","Cole & Caraco"),
          analysis = factor(analysis, levels = c("Crusius & Wanninkhof","Cole & Caraco")),
-         var = ifelse(var=="air","EXC","NEP"))
+         name = ifelse(name=="AIR","EXC","NEP"))
 
 ```
 
 ```{r flux-k, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE, fig.height=6, fig.width=6, fig.cap="Daily Net ecosystem production (NEP) and oxygen exchange with atmosphere (EXC) estimated using piston velocities from either Cole and Caraco (1998) and Cruisius and Wanninkhof (2003). Values are defined with respect to the water column (i.e negative values indicate a decrease in water column DO)."}
 # prepare data
 flux_d %>%
-  filter(!(var %in% c("flux","error"))) %>%
-  ggplot(aes(yday, value, color = analysis, linetype = var))+
+  ggplot(aes(yday, middle, color = analysis, linetype = name))+
   facet_wrap(~year)+
   geom_line(size = 0.5)+
   geom_hline(yintercept = 0, size = 0.3, alpha = 0.5)+
   scale_color_manual("",values=c("firebrick","dodgerblue"))+
   scale_linetype_discrete("")+
-  scale_y_continuous(expression(Daily~DO~Flux~"("*mg~O[2]~m^{-2}~d^{-1}*")"))+
+  scale_y_continuous(expression(Daily~DO~Flux~"("*g~O[2]~m^{-2}~d^{-1}*")"))+
   scale_x_continuous("Day of Year", breaks = c(170, 200, 230), limits = c(150, 250))+
   theme(legend.position = "top")
 ```
