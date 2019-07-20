@@ -78,7 +78,7 @@ beta0_phyc <- model_fit %>%
 
 # fit model 
 m_phyc <- gls(log(beta0) ~ pcyv, correlation = corCAR1(form = ~ yday|year), data = beta0_phyc)
-summary(mm_phyc1)
+summary(m_phyc)
 anova(m_phyc)
 
 
