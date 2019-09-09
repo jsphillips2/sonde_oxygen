@@ -91,7 +91,7 @@ pi_curve %>%
   
 ```
 
-```{r gpp-nep-er, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Daily estimates of GPP, ER, and NEP, plotted through time. Metabolism rates are expressed as changes in water column DO (e.g. ER is negative because it reduces DO). The lines are the posterior medians, and the shaded regions are the 68% uncertainty intervals matching the coverage of standard errors."}
+```{r gpp-nep-er, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Daily estimates of GPP, ER, and NEP, plotted through time. Metabolism rates are expressed as changes in water column DO (e.g., ER is negative because it reduces DO). The lines are the posterior medians, and the shaded regions are the 68% uncertainty intervals matching the coverage of standard errors."}
 model_fit %>%
   filter(name %in% c("GPP","ER","NEP")) %>%
   left_join(sonde_data %>%
@@ -112,7 +112,7 @@ model_fit %>%
                          linetype=0, alpha = 0.3)+
              geom_line(aes(color=name), size=0.5, na.rm=TRUE)+
              geom_text(data = tibble(year = 2015, yday = 190, name = c("GPP","NEP","ER"),
-                                         middle = c(5,2,-3)), 
+                                         middle = c(5,2,-3),size = 3.5), 
                        aes(label = name), hjust = 0)+
              scale_color_manual("",values=c("dodgerblue","black","firebrick2"), guide = F)+
              scale_fill_manual("",values=c("dodgerblue","black","firebrick2"), guide = F)+
@@ -161,7 +161,9 @@ alpha_d %>%
   scale_x_continuous("Day of Year", breaks = c(160, 190, 220))
 ```
 
-```{r beta0-rho, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="Maximum GPP and baseline ER (at the reference temperature of 12C) as inferred from the model, plotted through time. The lines are the posterior medians, and the shaded regions are the 68% uncertainty intervals matching the coverage of standard errors."}
+(ref:beta0-rho-cap) Maximum GPP and baseline ER (at the reference temperature of 12$^\circ$C) as inferred from the model, plotted through time. The lines are the posterior medians, and the shaded regions are the 68% uncertainty intervals matching the coverage of standard errors.
+
+```{r beta0-rho, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=5, fig.cap="(ref:beta0-rho-cap)"}
 # prepare data
 beta_rho_d <- model_fit %>%
   filter(name %in% c("beta0","rho")) %>%
@@ -178,26 +180,30 @@ ggplot(aes(yday, middle, color=name))+
               linetype=0, alpha = 0.3)+
   geom_line(aes(color=name), size=0.5)+
   geom_text(data = tibble(year = 2015,
-                              yday = 187,
+                              yday = 185,
                               name = c("beta0","rho"),
                               middle = c(520,270)),
             aes(color = name),
-            label=c("Max GPP","Basline ER"),
-            hjust = 0)+
+            label=c("Max GPP","Baseline ER"),
+            hjust = 0,
+            size = 3.5)+
   geom_text(data = tibble(year = 2015,
-                              yday = 187,
+                              yday = 185,
                               name = c("beta0","rho"),
                               middle = c(410,160)),
             aes(color = name),
             label=c("(beta^0)", "(rho)"), parse = T,
-            hjust = 0)+
+            hjust = 0,
+            size = 3.5)+
   scale_y_continuous(expression(Metabolism~Parameter~"("*mg~O[2]~m^{-2}~h^{-1}*")"))+
   scale_color_manual("",values=c("dodgerblue","firebrick2"), guide = F)+
   scale_fill_manual("",values=c("dodgerblue","firebrick2"), guide = F)+
   scale_x_continuous("Day of Year", breaks = c(170, 200, 230), limits = c(150, 250))
 ```
 
-```{r beta0-vs-rho, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=4, fig.cap="Baseline ER plotted against maximum GPP, both defined at the reference temperature of 12C. Each line represents a separate year, with squares indicating the beginning and triangles the end of each series."}
+(ref:beta0-vs-rho-cap) Baseline ER plotted against maximum GPP, both defined at the reference temperature of 12$^\circ$C. Each line represents a separate year, with squares indicating the beginning and triangles the end of each series.
+
+```{r beta0-vs-rho, echo = FALSE, message = FALSE, warnings = FALSE, cache = FALSE, fig.height=4, fig.width=4, fig.cap="(ref:beta0-vs-rho-cap)"}
 model_fit %>%
   filter(name %in% c("beta0","rho")) %>%
   left_join(sonde_data %>%
