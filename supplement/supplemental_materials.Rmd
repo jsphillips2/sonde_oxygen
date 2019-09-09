@@ -391,50 +391,51 @@ ext_data %>%
 
 ### NEP
 
-For fitting the model, I z-scored (centered on the mean and divided by the standard deviation) the observed DO concentrations and scaled the model accordingly. I then nondimensionalized the scaled model to remove the scale parameters (mixing depth and mean/standard deviation for the observed DO). This put the observed values and model parameters on unit scale, which improved the computaitonal efficiency and allowed for the use for weakly-informative priors on unit scale. I then back-transformed the scaled parameters to recover their values on the original scale.
+For fitting the model, I z-scored (centered on the mean and divided by the standard deviation) the observed DO concentrations and scaled the model accordingly. I then nondimensionalized the scaled model to remove the scale parameters (mixing depth and mean/standard deviation for the observed DO). This put the observed values and model parameters on unit scale, which improved the computational efficiency and allowed for the use for weakly-informative priors on unit scale. I then back-transformed the scaled parameters to recover their values on the original scale.
 
 The model for DO dynamics (eqn 9 in the main text) is:
-$$
+\begin{equation}
 DO_{t+1} = DO_t+ \frac{\Delta h}{z_{mix}} \left(NEP_t+k_t(DO^{eq}_t-DO_t) \right)+\epsilon^{proc}_t
-$$
+\end{equation}
 
 where $DO_t$ is the DO concentration [$mg~O_2~m^{-3}$], $DO^{eq}_t$ is the DO concentration at saturation [$mg~O_2~m^{-3}$], $\Delta h$ = 1 hour, $NEP_t$ is the net ecosystem production [$mg~O_2~m^{-2}~h^{-1}$], $k$ [$m~h^{-1}$] is the rate of oxygen exchange, $z_{mix}$ is the mixing depth [$3.3m$], and $\epsilon_{proc}$ is the processes error [$mg~O_2~m^{-3}$]. For simplicity, only a single time index $t$ is used, rather than indexing by hour and day as in the main text.
 
 For clarity, $DO$ is replaced with $y$ and $NEP$ with $\phi$, yielding
 
-$$
+\begin{equation}
 y_{t+1} = y_t+ \frac{\Delta h}{z_{mix}}\left(\phi_t+k_t(y^{eq}_t-y_t) \right)+\epsilon^{proc}_t.
-$$
+\end{equation}
 
 Z-scoring the observed DO values by the mean ($\mu$) and standard deviation ($\tau$) of the full set of DO observations implies the following scaling of the model:
 
-$$
+\begin{equation}
 \frac{y_{t+1}-\mu}{\tau} = \frac{1}{\tau} \left(y_t - \mu + \frac{\Delta h}{z_{mix}} \left(\phi_t+k_t(y^{eq}_t-y_t) \right)+\epsilon^{proc}_t \right)
-$$
+\end{equation}
 
 which can be expanded as
 
-$$
+\begin{equation}
 = \frac{1}{\tau} y_t - \frac{1}{\tau}\mu + \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\phi_t + \frac{1}{\tau} \frac{\Delta h}{z_{mix}} k_t (y^{eq}_t-y_t) + \frac{1}{\tau}\epsilon^{proc}_t. 
-$$
+\end{equation}
 
 Rearranging to express all "$y$" terms to resemble the lefthand side yields
 
-$$
+\begin{equation}
 \frac{y_{t+1}-\mu}{\tau} = \frac{y_t-\mu}{\tau} + \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\phi_t + \frac{\Delta h}{z_{mix}} k_t\left( \left(\frac{y^{eq}_t-\mu}{\tau} + \frac{\mu}{\tau} \right)- \left(\frac{y_t-\mu}{\tau} + \frac{\mu}{\tau}\right) \right) + \frac{1}{\tau}\epsilon^{proc}_t
-$$
+\end{equation}
 
 which simplifies to 
 
-$$
+\begin{equation}
 \frac{y_{t+1}-\mu}{\tau} = \frac{y_t-\mu}{\tau} + \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\phi_t + \frac{\Delta h}{z_{mix}} k_t\left( \frac{y^{eq}_t-\mu}{\tau} - \frac{y_t-\mu}{\tau} \right) + \frac{1}{\tau}\epsilon^{proc}_t. 
-$$
+\end{equation}
 
 Substituting with scaled variables yields
 
-$$
+\begin{equation}
 x_{t+1} = x_t + \hat{\phi_t} + \hat{k}_t (x^{eq}_t - x_t) + \hat{\epsilon}^{proc}_t
-$$
+\end{equation}
+
 where 
 
 \begin{equation}
@@ -462,21 +463,21 @@ NEP ($\phi_t$) is the difference between GPP and ER. Therefore, the scaling of N
 
 The original equation for $\chi$ (main text eqn X) is
 
-$$
+\begin{equation}
 \chi_t = \beta_{d}~\text{tanh} \left( \frac{\alpha_t}{\beta_t}L_t\right)  
-$$ 
+\end{equation}
 
 where $\beta_t$ is the maximum rate of GPP [$mg~O_2~m^{-3}~h^{-1}$] on a particular day and $\alpha$ [$mg~O_2~s~\mu mol~photons^{-1}~m^{-1}~h^{-1}$] is the initial slope of the P-I at low light. This is scaled as
 
-$$
+\begin{equation}
 \hat{\chi}_t = \frac{1}{\tau}\frac{\Delta h}{z_{mix}}\beta_t~\text{tanh} \left( \frac{\frac{\lambda}{\tau}\frac{\Delta h}{z_{mix}}\alpha_t}{\frac{1}{\tau}\frac{\Delta h}{z_{mix}}\beta_t}\frac{L_t}{\lambda}\right)  
-$$ 
+\end{equation} 
 
 where $\lambda$ is the mean light level (so that the initial slope can be expressed on unit scale). This simplifies to 
 
-$$
+\begin{equation}
 \hat{\chi}_t = \hat{\beta}_t~\text{tanh} \left( \frac{\hat{\alpha}_t}{\hat{\beta}_t}\hat{L}_t\right)  
-$$ 
+\end{equation}
 
 where 
 \begin{equation}
@@ -765,6 +766,42 @@ alpha_d %>%
   guides(size = F)+
   theme(legend.position = c(0.14,0.91))
 ```
+
+\clearpage
+
+# Variance Partitioning
+
+I partitioned variation in NEP, GPP, and ER resulting from variation in physical and biological parameters by applying the delta method to main text equations 2, 3, and 7, respectively. This method gives the first-order approximation of the variance in a function $F$ that depends on a vector $\Theta_{d,h}$ of time-varying parameters $\theta^1_{d,h}$, $\theta^2_{d,h}$, ... $\theta^k_{d,h}$ as
+
+\begin{equation}
+\text{Var}[F(\Theta_{d,h})] \approx \sum_{i}~\left( \frac{\partial \hat F}{\partial \hat {\theta^i}} \right)^2 \sigma^2_{\theta^i}~+~\sum_{i|i\neq j}~\sum_{j|j\neq i}~\frac{\partial \hat F}{\partial \hat {\theta^i}}~\frac{\partial \hat F}{\partial \hat {\theta^j}}~\sigma_{\theta^i \theta^j}
+(\#eq:a)
+\end{equation}
+
+where $\hat{\theta^i}$ is the mean value of $\theta^i_{d,h}$ across all $d$ and h, $\hat F$ is the function evaluated at the vector of mean values for each parameter vector $\hat\Theta$, $\frac{\partial \hat F}{\partial \hat {\theta^i}}$ is the partial derivative of $\hat F$ with respect to  $\hat{\theta^i}$,  $\sigma^2_{\theta^i}$ is the variance in $\theta^i_{d,h}$, and $\sigma_{\theta^i \theta^j}$ is the covariance between $\theta^i_{d,h}$ and $\theta^j_{d,h}$. The relative contribution of a given parameter $\theta^{i=I}_{d,h}$ is calculated as the sum of all terms in equation \@ref(eq:a) where $i=I$, divided by the total variance $\text{Var}[F(\Theta_{d,h})]$. Note that the contribution of a parameter will be reduced by its negative covariances with other parameters and can even be negative if the contribution of its negative covariance terms exceeds the contribution of its (necessarily positive) variance term. The advantage of an explicit partitioning based on the model equations, as opposed to a more conventional variance partitioning (e.g., ANOVA), is that the explicit partitioning accounts for nonlinearities and interactions between explanatory variables through both derivatives and covariances. 
+
+Generically, the contribution of a variable $\theta^i$ to the variance in $F$ is determined by (a) the sensitivity of $F$ to variation in $\theta^i_{d,h}$ (i.e. the partial derivatives in equation \@ref(eq:a)) and (b) the variance of $\theta^i_{d,h}$. This can be illustrated by considering the contribution of a single parameter $\theta^{i=I}_{d,h}$ in equation \@ref(eq:a)  relative to the total variance:
+
+\begin{equation}
+\left [\left( \frac{\partial \hat F}{\partial \hat {\theta^I}} \right)^2 \sigma^2_{\theta^I}~+~ \sum_{j|j\neq I} ~\frac{\partial \hat F}{\partial \hat {\theta^I}}~\frac{\partial \hat F}{\partial \hat {\theta^j}}~r_{\theta^I \theta^j}~\sigma_{\theta^I}~\sigma_{\theta^j} \right] /~ \text{Var}[F(\Theta_{d,h})]
+(\#eq:b)
+\end{equation}
+
+where the covariance between a given pair of variables $\theta^I$ and $\theta^j$ is expressed in terms of their correlation ($r_{\theta^I \theta^j}$) and respective standard deviations ($\sigma_{\theta^I}$ and $\sigma_{\theta^j}$). Factoring $\sigma^2_{\theta^I}$ and expressing it in terms of the coefficient of variation ($\text{CV}_{\theta^I}$) yields 
+
+\begin{equation}
+\text{CV}^2_{\theta^I} \left (\hat{\theta^I} \right)^2 \left [\left( \frac{\partial \hat F}{\partial \hat {\theta^I}} \right)^2~+~ \sum_{j|j\neq I}~\frac{\partial \hat F}{\partial \hat {\theta^I}}~\frac{\partial \hat F}{\partial \hat {\theta^j}}~r_{\theta^I \theta^j}~\frac{\sigma_{\theta^j}}{\sigma_{\theta^I}} \right] /~ \text{Var}[F(\Theta_{d,h})]
+(\#eq:c)
+\end{equation}
+
+which can be simplified by expressing it as the product of $\text{CV}^2_{\theta^I}$ and the “scaled sensitivity” $\psi_{\theta^I}$:
+
+\begin{equation}
+\text{CV}^2_{\theta^I}~\psi_{\theta^I}
+(\#eq:d)
+\end{equation}
+
+Both $\text{CV}^2_{\theta^I}$ and $\psi_{\theta^I}$ are dimensionless and can be compared for different variables. $\text{CV}^2_{\theta^I}$ quantifies the overall variation in $\theta^I_{d,h}$, while $\psi_{\theta^I}$ quantifies how sensitive $F$ is to variation in $\theta^I_{d,h}$ given its correlations with other variables.
 
 \clearpage
 
