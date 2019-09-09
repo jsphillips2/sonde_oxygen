@@ -7,10 +7,10 @@ library(tidyverse)
 library(matrixcalc)
 
 # import data and model fit
-input_dir = "analyses/model_fit/"
-sonde_data = read_csv(paste0(input_dir,"input/sonde_prep.csv"))
-params_full = read_csv(paste0(input_dir,"output/fixed_pars_full.csv"))
-daily = read_csv(paste0(input_dir,"output/daily_full.csv"))
+input_dir = "model/"
+sonde_data = read_csv(paste0(input_dir,"input/main/sonde_prep.csv"))
+params_full = read_csv(paste0(input_dir,"output/main/fixed_pars_full.csv"))
+daily = read_csv(paste0(input_dir,"output/main/daily_full.csv"))
 
 
 
