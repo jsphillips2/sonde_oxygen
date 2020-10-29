@@ -6,6 +6,22 @@ Analyses associated with the manuscript "Time-varying responses of lake metaboli
 
 Joseph Phillips, Integrative Biology, UW-Madison
 
+## Update: 29 October 2020
+
+An sign error in the code associated with the calculation of the temperature dependence 
+of the Schmidt number has been corrected (see lines 364-368 of `data/clean_data.R`). 
+The code now runs for the corrected version, 
+but with the original preserved for future reference.
+All downstream files associated with the update are marked as such,
+and otherwise correspond to the originals.
+The error had a very minor affect on the analyses,
+due to the (a) inclusion of process error and (b) the model's treatment
+of biological processes as temporally autocorrelated. 
+Deviations due to the erroneous temperature dependence of the Schmidt number were 
+therefore not attributed to the biological processes of primary interest.
+I have contacted the journal and a corrigendum is currently under consideration.
+The error was discovered by a colleague, to whom I am greatly indebted,
+who sought to reproduce a portion of the results.
 
 ## Description
 

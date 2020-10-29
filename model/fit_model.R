@@ -13,8 +13,8 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores()-2)
 
 # specify analysis
-analysis_list <- c("main","surface_par","alt_k","sig_obs","fixed")
-analysis <- analysis_list[1] 
+analysis_list <- c("main","surface_par","alt_k","sig_obs","fixed","main_revised")
+analysis <- analysis_list[6] 
 
 # read data
 data <- read_rdump(paste0("model/input/",analysis,"/sonde_list.R"))
@@ -35,9 +35,9 @@ data$temp_ref <- 12
 #==========
 
 # model
-model <- if(analysis=="main"|analysis=="surface_par"|analysis=="alt_k"){"o2_model.stan"
+model <- if(analysis %in% c("main","surface_par","alt_k","main_revised")){"o2_model.stan"
 } else if(analysis=="fixed"){"o2_model_fixed.stan"
-    } else if(analysis=="sig_obs"){"o2_model_sig_obs.stan"}
+} else if(analysis=="sig_obs"){"o2_model_sig_obs.stan"}
 
 # model path
 model_path <- paste0("model/stan/",model)
@@ -49,8 +49,8 @@ adapt_delta <- 0.8
 max_treedepth <- 10
 
 # fit model
-fit <- stan(file = model_path, data = data, seed=1, chains = chains, iter = iter, 
-            control = list(adapt_delta = adapt_delta, max_treedepth = max_treedepth))
+# fit <- stan(file = model_path, data = data, seed=1, chains = chains, iter = iter, 
+#             control = list(adapt_delta = adapt_delta, max_treedepth = max_treedepth))
 
 # summary of fit
 fit_summary <- summary(fit, probs=c(0.16, 0.5, 0.84))$summary %>% 
@@ -71,7 +71,7 @@ check_energy(fit)
 output_path <- paste0("model/output/",analysis)
 
 # save model full output
-saveRDS(fit, paste0(output_path,"/fit.rds"))
+# saveRDS(fit, paste0(output_path,"/fit.rds"))
 
 
 
